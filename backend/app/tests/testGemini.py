@@ -1,5 +1,3 @@
-AIzaSyD149VvpeuJNfAdi0i09ySgYDpAhGD31Uw
-
 from langchain.chat_models import ChatGemini  # Hypothetical, assuming LangChain adds support
 from langchain.schema import HumanMessage
 from google.oauth2 import service_account
