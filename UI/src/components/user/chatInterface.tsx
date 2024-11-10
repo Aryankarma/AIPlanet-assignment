@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, FormEvent } from "react";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -14,26 +14,20 @@ interface Message {
 }
 
 const ChatInterface = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "explain like im 5",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 2,
-      text: "Our own Large Language Model (LLM) is a type of AI that can learn from data. We have trained it on 7 billion parameters which makes it better than other LLMs. We are featured on aiplanet.com and work with leading enterprises to help them use AI securely and privately. We have a Generative AI Stack which helps reduce the hallucinations in LLMs and allows enterprises to use AI in their applications.",
-      sender: "ai",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [inputText, setInputText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setSelectedFile(file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Reset the input
+    }
+    
+    savePdf(file);
   };
 
   const handleUploadClick = () => {
@@ -47,22 +41,100 @@ const ChatInterface = () => {
     }
   };
 
+
+  const savePdf = async (file: File | null) => {
+    try {
+      if (!file) {
+        alert("Please select a file before uploading.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("http://localhost:8000/savePdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Couldn't save pdf in the backend");
+      } else {
+        console.log("Pdf Saved");
+      }
+    } catch (error) {
+      alert("Error occurred: Check console");
+      console.log(error);
+    }
+  };
+
+  const sendMessage = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      alert("no file attached");
+      return;
+    }
+
+    const userMessage: Message = {
+      id: Date.now(),
+      text: inputText,
+      sender: "user",
+      avatar: "S",
+    };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+    try {
+      const formData = new FormData();
+      formData.append("message", inputText);
+      if (selectedFile) {
+        formData.append("file", selectedFile);
+      }
+
+      const response = await fetch("http://localhost:8000/uploadPdf2", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message to the server");
+      }
+
+      const data: any = await response.json();
+      // console.log(data)
+      const aiMessage: Message = {
+        id: Date.now(),
+        text: data.message,
+        sender: "ai",
+      };
+      setMessages((prevMessages) => [...prevMessages, aiMessage]);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setInputText("");
+      // setSelectedFile(null);
+    }
+  };
+
   return (
     <div className="flex min-h-screen min-w-[100vw] flex-col">
       <header className="flex flex-col sm:flex-row items-center justify-between border-b py-4 px-20 gap-4">
-        <div className="flex items-center gap-2 bg-white px-2 rounded-xl">
+        <div className="flex items-center gap-2 bg-white datapx-2 rounded-xl">
           <img
-            src="../../../public/assets/AI Planet Logo.png"
+            src="/assets/AI Planet Logo.png"
             alt="AI Planet Logo"
-            className="h-10 w-full"
+            className="hidden h-10 w-full"
           />
         </div>
         <div className="flex items-center gap-4 w-full sm:w-auto">
           {selectedFile ? (
             <div className="flex items-center justify-between p-0 pl-2 border rounded-md">
-              <span className="">{selectedFile.name}</span>
+              <span>{selectedFile.name}</span>
               <Button
-                className="ml-2 bg-gray-100 text-black hover:text-white hover:bg-gray-950 border"
+                className="ml-2 bg-gray-100 text-black border"
                 variant="ghost"
                 size="icon"
                 onClick={handleRemoveFile}
@@ -85,7 +157,7 @@ const ChatInterface = () => {
           />
           <Button
             variant="outline"
-            className="gap-2 whitespace-nowrap"
+            className="gap-2"
             onClick={handleUploadClick}
           >
             <Upload className="h-4 w-4" />
@@ -104,10 +176,7 @@ const ChatInterface = () => {
                     {message.avatar}
                   </AvatarFallback>
                 ) : (
-                  <img
-                    src="../../../public/assets/AIAssistant.png"
-                    alt="AI Avatar"
-                  />
+                  <img src="/assets/AIAssistant.png" alt="AI Avatar" />
                 )}
               </Avatar>
               <div className="grid gap-2.5">
@@ -122,15 +191,17 @@ const ChatInterface = () => {
       </main>
       <footer className="p-4">
         <div className="mx-auto max-w-4xl">
-          <form className="flex items-center gap-4">
+          <form className="flex items-center gap-4" onSubmit={sendMessage}>
             <Input
               className="flex-1 py-6 shadow-md"
               placeholder="Send a message..."
               type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
             />
             <Button
               size="icon"
-              className="p-6 bg-white text-black hover:text-white hover:bg-gray-950 shadow-md hover:shadow-lg"
+              className="p-6 bg-white text-black shadow-md"
               type="submit"
             >
               <Send
