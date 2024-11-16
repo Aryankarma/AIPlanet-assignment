@@ -1,5 +1,5 @@
 import { ThemeProvider } from "./components/ui/ThemeProvider";
-import ChatInterface from "./components/user/chatInterface";
+import ChatInterface from "./components/app/chatInterface";
 
 function App() {
   return (

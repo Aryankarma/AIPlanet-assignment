@@ -5,6 +5,7 @@ import { Input } from "../ui/input";
 import { Card, CardContent } from "../ui/card";
 import { Send, Upload, X } from "lucide-react";
 import { ModeToggle } from "../ui/ThemeToggle";
+import { v5 as uuidv5 } from "uuid";
 
 interface Message {
   id: number;
@@ -68,54 +69,57 @@ const ChatInterface = () => {
     }
   };
 
+  
+
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
-
-    if (!selectedFile) {
-      alert("no file attached");
+  
+    if (!inputText.trim()) {
+      alert("Please enter a question.");
       return;
     }
-
+  
     const userMessage: Message = {
       id: Date.now(),
       text: inputText,
       sender: "user",
       avatar: "S",
     };
+  
     setMessages((prevMessages) => [...prevMessages, userMessage]);
-
+  
     try {
       const formData = new FormData();
-      formData.append("message", inputText);
-      if (selectedFile) {
-        formData.append("file", selectedFile);
-      }
-
-      const response = await fetch("http://localhost:8000/uploadPdf2", {
+      formData.append("message", inputText); 
+  
+      const response = await fetch("http://localhost:8000/ask_question", {
         method: "POST",
         body: formData,
         headers: {
           Accept: "application/json",
         },
       });
-
+  
       if (!response.ok) {
-        throw new Error("Failed to send message to the server");
+        throw new Error("Failed to get a response from the server");
       }
-
-      const data: any = await response.json();
-      // console.log(data)
+  
+      const data = await response.json();
+      console.log("API Response:", data);
+  
       const aiMessage: Message = {
         id: Date.now(),
-        text: data.message,
+        text: data.message || "Sorry, I couldn't understand that.",
         sender: "ai",
+        avatar: "A", 
       };
+  
       setMessages((prevMessages) => [...prevMessages, aiMessage]);
+  
     } catch (error) {
       console.error("Error:", error);
     } finally {
-      setInputText("");
-      // setSelectedFile(null);
+      setInputText(""); 
     }
   };
 
@@ -157,10 +161,10 @@ const ChatInterface = () => {
           />
           <Button
             variant="outline"
-            className="gap-2"
+            className={`gap-2 ${selectedFile === null ? 'flex' : "hidden"}`}
             onClick={handleUploadClick}
           >
-            <Upload className="h-4 w-4" />
+            <Upload className={`h-4 w-4`} />
             Upload PDF
           </Button>
           <ModeToggle />
@@ -201,8 +205,9 @@ const ChatInterface = () => {
             />
             <Button
               size="icon"
-              className="p-6 bg-white text-black shadow-md"
+              className="p-6 shadow-md"
               type="submit"
+              variant={"outline"}
             >
               <Send
                 className="h-4 w-4"

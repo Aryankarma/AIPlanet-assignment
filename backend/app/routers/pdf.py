@@ -1,6 +1,7 @@
 import os
 import io
 import uuid
+import logging
 import tempfile
 from pinecone import Pinecone
 from typing import Annotated
@@ -11,136 +12,92 @@ from ..database import get_db_data
 from .. import models, services, schemas
 from pdfminer.high_level import extract_text
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
-
+from pinecone_plugins.assistant.models.chat import Message
 
 router = APIRouter()
 
 load_dotenv()
 NAMESPACE_UUID = uuid.UUID(os.getenv("NAMESPACE_UUID"))
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+ASSISTANT_NAME = "aiplanetassistant"
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.DEBUG)
+DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+os.makedirs(DATA_FOLDER_PATH, exist_ok=True)
 
 
-@router.post("/uploadPdf2")
-async def upload_file2(
-    message: str = Form(...), 
-    file: UploadFile = File(...), 
-    db: Session = Depends(get_db_data)
-):
-    if not file:
-        raise HTTPException(status_code=400, detail="No file uploaded.")
+def get_or_create_assistant(assistant_name: str):
+    """Checks if the assistant exists or creates a new one."""
+    assistants = pc.assistant.list_assistants()
+
+    assistant_names = []
+    for assistant in assistants:
+        assistant_names.append(assistant.name) 
+    print("Listing assistants: ", assistant_names)
+
+    assistant_found = None
+    for assistant in assistants:
+        if assistant.name == assistant_name:
+            assistant_found = assistant
+            break
     
-    if file.content_type != 'application/pdf':
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a PDF.")
-
-    # Read file and extract text
-    file_content = await file.read()
-    pdf_file = io.BytesIO(file_content)
-    extracted_text = extract_text(pdf_file)
-
-    filename = file.filename
-    pdf_id = str(uuid.uuid3(NAMESPACE_UUID, filename))
-
-    # Check if the file already exists in the database
-    existing_pdf = db.query(PdfDocument).filter(PdfDocument.id == pdf_id).first()
-    if existing_pdf:
-        print("File already exists.")
-        raise HTTPException(status_code=400, detail="File already exists.")
-
-    new_pdf = PdfDocument(
-        id=pdf_id,
-        filename=filename,
-        message=message,
-        pdf_text=extracted_text
-    )
-
-    db.add(new_pdf)
-    db.commit()
-    db.refresh(new_pdf)
-
-    return {
-        "message": "File uploaded and data saved successfully.",
-        "data": {
-            "filename": filename,
-            "message": message,
-            "pdf_text": extracted_text
-        }
-    }
-    
-    
-@router.post("/savePdf")
-async def save_pdf_in_vector(file: Annotated[UploadFile, File()]):
-    if not file:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(await file.read())
-        temp_file_path = temp_file.name
-
-    assistant1 = pc.assistant.create_assistant(
-        assistant_name="aiplanetassistant", 
-        instructions="You are AI Planet company's assistant and are extremely polite.",
-        timeout=30
-    )
-    
-    assistantStatus = pc.assistant.get_assistant(
-        assistant_name="aiplanetassistant", 
-    )
-    
-    print(assistantStatus.status) # shows assitant status and other details
-    
-    
-    # print("assistant", assistant)
-    
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(await file.read())
-        temp_file_path = temp_file.name
-
-    try:
-        # Upload the temporary file
-        response = assistant.upload_file(
-            file_path=temp_file_path,
+    if assistant_found:
+        print(f"Assistant '{assistant_name}' found.")
+        assistant = pc.assistant.Assistant(assistant_name=assistant_name)
+    else:
+        print(f"Creating assistant '{assistant_name}'...")
+        assistant = pc.assistant.create_assistant(
+            assistant_name=assistant_name,
+            instructions="You are AIPlanet's assistant and are extremely polite.",
+            timeout=30,
         )
-        print("response:", response)
-
-        # List files in the assistant
-        print("myAssistant files:", assistant.list_files())
-    finally:
-        # Remove the temporary file after upload
-        os.remove(temp_file_path)
-
-    return {"status": "file uploaded successfully", "response": response}
-
-
-
-# @router.post("/uploadPdf")
-# async def upload_file(message: str = Form(...), file: UploadFile = File(...)):
-#     if not file:
-#         return {"error": "No file uploaded."}
+        print(f"Assistant '{assistant_name}' created.")
     
-#     if file.content_type != 'application/pdf':
-#         return {"error": "Invalid file type. Please upload a PDF."}
+    return assistant
 
-#     file_content = await file.read()
-#     pdf_file = io.BytesIO(file_content)
-#     extracted_text = extract_text(pdf_file)
 
-#     return {
-#         "message": "File received successfully",
-#         "data": {
-#             "text": message,
-#             "pdf_text": extracted_text
-#         }
-#     }
+@router.post("/savePdf")
+async def save_pdf(file: UploadFile = File(...)):
+    """Uploads a PDF and stores it in the Pinecone assistant."""
+    try:
+        assistant = get_or_create_assistant(ASSISTANT_NAME)
+    
+        print("stored in local")
+        temp_file_path = os.path.join(DATA_FOLDER_PATH, file.filename)
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(await file.read())
 
- 
-@router.post("/ask_question/{pdf_id}")
-async def ask_question(pdf_id: int, request: schemas.QuestionRequest, db: Session = Depends(get_db_data)):
-    # Fetch the PDF document from the database
-    pdf_doc = db.query(PdfDocument).filter(PdfDocument.id == pdf_id).first()
-    if not pdf_doc:
-        raise HTTPException(status_code=404, detail="PDF document not found")
+        print("uploading file... ")
+        response = assistant.upload_file(file_path=temp_file_path)
 
-    # Process the question
-    answer = services.process_question(request.question, pdf_doc.text_content)
-    return {"answer": answer}
+        print("uploading done. ")
+        
+        os.remove(temp_file_path)
+        print("deleted from local")
+
+        response_dict = {"message": str(response)}
+
+        return {"message": f"PDF '{file.filename}' uploaded successfully.", "response": response_dict}
+
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post("/ask_question")
+async def ask_question(message: str = Form(...)):
+    """Handles user questions and sends them to the Pinecone assistant."""
+    
+    try:
+        print("chatting with assistant")
+        assistant = get_or_create_assistant(ASSISTANT_NAME)
+        msg = Message(content=message)
+        response = assistant.chat(messages=[msg])
+        
+        print(response.message)
+            
+        return {"message": str(response.message.content)}
+    
+    except Exception as e:
+        logging.error(f"Error while processing question: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
