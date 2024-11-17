@@ -1,13 +1,16 @@
 import { ThemeProvider } from "./components/ui/ThemeProvider";
-import ChatInterface from "./components/app/chatInterface";
+import ChatInterface from "./pages/ChatInterface";
+import { Layout } from "./components/layout";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="flex flex-col justify-center items-center w-[100vw] h-[100vh]">
-        <ChatInterface />
-      </div>
-    </ThemeProvider>
+    <div className="flex flex-col justify-center items-center">
+      <Layout>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <ChatInterface />
+        </ThemeProvider>
+      </Layout>
+    </div>
   );
 }
 
