@@ -144,14 +144,10 @@ const ChatInterface = () => {
         }
         open={isSidebarOpen}
       >
-        <AppSidebar />
+        <AppSidebar setIsSidebarOpen={setIsSidebarOpen} />
         <SidebarInset>
           <header className="flex flex-col sm:flex-row items-center justify-between border-b p-4 gap-4">
             <div className="flex items-center gap-2 bg-white datapx-2 rounded-xl">
-              <SidebarTrigger
-                className="bg-background"
-                onClick={() => setIsSidebarOpen((prev) => !prev)}
-              />
               <img
                 src="/assets/AI Planet Logo.png"
                 alt="AI Planet Logo"

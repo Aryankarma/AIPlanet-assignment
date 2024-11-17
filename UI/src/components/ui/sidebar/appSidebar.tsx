@@ -1,7 +1,17 @@
-import * as React from "react"
-import { ArchiveX, Command, File, Inbox, Send, Trash2, FileText, MessageCircle, UserIcon } from "lucide-react"
-import { NavUser } from "./navUser"
-import { Label } from "@/components/ui/label"
+import * as React from "react";
+import {
+  ArchiveX,
+  Command,
+  File,
+  Inbox,
+  Send,
+  Trash2,
+  FileText,
+  MessageCircle,
+  UserIcon,
+} from "lucide-react";
+import { NavUser } from "./navUser";
+import { Label } from "@/components/ui/label";
 import {
   Sidebar,
   SidebarContent,
@@ -13,9 +23,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { Switch } from "@/components/ui/switch"
+} from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 
 const data = {
   user: {
@@ -25,7 +36,7 @@ const data = {
   },
   navMain: [
     {
-      title: "Documents",
+      title: "Docs",
       url: "#",
       icon: FileText,
       isActive: true,
@@ -41,7 +52,7 @@ const data = {
       url: "#",
       icon: MessageCircle,
       isActive: false,
-    }
+    },
   ],
   mails: [
     {
@@ -125,17 +136,23 @@ const data = {
         "To celebrate our recent project success, I'd like to organize a team dinner.\nAre you available next Friday evening? Please let me know your preferences.",
     },
   ],
-}
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [activeItem, setActiveItem] = React.useState(data.navMain[0])
-  const [mails, setMails] = React.useState(data.mails)
-  const { setOpen } = useSidebar()
+export function AppSidebar({
+  setIsSidebarOpen,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  const [activeItem, setActiveItem] = React.useState(data.navMain[0]);
+  const [mails, setMails] = React.useState(data.mails);
+  const { setOpen } = useSidebar();
 
   return (
     <Sidebar
       collapsible="icon"
       className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
+      setIsSidebarOpen={setIsSidebarOpen}
       {...props}
     >
       {/* This is the first sidebar */}
@@ -149,7 +166,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-                <a href="#" className="text-primary bg-secondary hover:text-secondary hover:bg-primary">
+                {/* <a href="#" className="text-primary bg-secondary hover:text-secondary hover:bg-primary">
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                     <Command className="size-4" />
                   </div>
@@ -157,7 +174,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <span className="truncate font-semibold">Acme Inc</span>
                     <span className="truncate text-xs">Enterprise</span>
                   </div>
-                </a>
+                </a> */}
+                <SidebarTrigger
+                  className="bg-sidebar-background"
+                  onClick={() => setIsSidebarOpen((prev) => !prev)}
+                />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -174,18 +195,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         hidden: false,
                       }}
                       onClick={() => {
-                        setActiveItem(item)
-                        const mail = data.mails.sort(() => Math.random() - 0.5)
+                        setActiveItem(item);
+                        const mail = data.mails.sort(() => Math.random() - 0.5);
                         setMails(
                           mail.slice(
                             0,
                             Math.max(5, Math.floor(Math.random() * 10) + 1)
                           )
-                        )
-                        setOpen(true)
+                        );
+                        setIsSidebarOpen(true)
+                        setOpen(true);
                       }}
                       isActive={activeItem.title === item.title}
-                      className="px-2.5 md:px-2 data-[active=true]:bg-gray-300 data-[active=true]:text-black border-none outline-none text-primary sidebar-background hover:border-none hover:text-primary bg-transparent"
+                      className="px-2.5 md:px-2 data-[active=true]:bg-sidebar-accent data-[active=true]:text-white border-none outline-none text-primary sidebar-background hover:border-none hover:text-primary bg-transparent"
                     >
                       <item.icon />
                       <span>{item.title}</span>
@@ -204,17 +226,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* This is the second sidebar */}
       {/* We disable collapsible and let it fill remaining space */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
+        <SidebarHeader className="gap-3.5 border-b p-6 py-[18px] ">
           <div className="flex w-full items-center justify-between">
             <div className="text-base font-medium text-foreground">
               {activeItem.title}
             </div>
-            <Label className="flex items-center gap-2 text-sm">
+            {/* <Label className="flex items-center gap-2 text-sm border-white border">
               <span>Unreads</span>
               <Switch className="shadow-none" />
-            </Label>
+            </Label> */}
+            <SidebarInput className="w-2/3" placeholder="Type to search..." />
           </div>
-          <SidebarInput placeholder="Type to search..." />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="px-0">
@@ -240,5 +262,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarContent>
       </Sidebar>
     </Sidebar>
-  )
+  );
 }

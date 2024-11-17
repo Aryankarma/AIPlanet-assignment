@@ -159,6 +159,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    setIsSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
   }
 >(
   (
@@ -168,6 +169,7 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
+      setIsSidebarOpen, 
       ...props
     },
     ref
@@ -356,7 +358,7 @@ const SidebarHeader = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-[10px]", className)}
+      className={cn("flex flex-col gap-2 px-2 py-[18px] border-b ", className)}
       {...props}
     />
   )
@@ -419,7 +421,7 @@ const SidebarGroup = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="group"
-      className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
+      className={cn("relative flex w-full min-w-0 flex-col p-2 py-4", className)}
       {...props}
     />
   )
