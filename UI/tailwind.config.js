@@ -4,7 +4,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  ],  
   theme: {
   	extend: {
   		borderRadius: {
@@ -12,10 +12,13 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+		
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
-  			card: {
+			scrollbarThumb: 'hsl(var(--scrollbar-thumb))',
+			scrollbarThumbHover: 'hsl(var(--scrollbar-thumb-hover))',
+			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
   			},
@@ -66,5 +69,5 @@ export default {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("tailwind-scrollbar")],
 }

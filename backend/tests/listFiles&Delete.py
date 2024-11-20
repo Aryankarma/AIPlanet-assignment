@@ -12,21 +12,26 @@ assistant = pc.assistant.Assistant(
 
 files = assistant.list_files()
 
-print("files before deleting")
+# print("files before deleting")
+print(files)
+
+print("")
+print("")
 
 for file in files:
-    print(file.name)
-    print(file.id)
-    print("    ")
+    print(file)
+    # print(file.name)
+    # print(file.id)
+    # print("    ")
 
-assistant.delete_file(file_id="4cbf8571")
+# assistant.delete_file(file_id="4cbf8571")
 
-print("printing after deleting")
+# print("printing after deleting")
 
-files = assistant.list_files()
+# files = assistant.list_files()
 
 
-for file in files:
-    print(file.name)
-    print(file.id)
-    print("    ")
+# for file in files:
+#     print(file.name)
+#     print(file.id)
+#     print("    ")

@@ -14,12 +14,18 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/ui/sidebar/appSidebar";
 import { Separator } from "@/components/ui/separator";
+import axios from "axios";
+import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 
 interface Message {
   id: number;
   text: string;
   sender: "user" | "ai";
   avatar?: string;
+}
+
+interface MessageApiResponse {
+  message: string;
 }
 
 const ChatInterface = () => {
@@ -40,7 +46,7 @@ const ChatInterface = () => {
     setSelectedFile(file);
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Reset the input
+      fileInputRef.current.value = "";
     }
 
     savePdf(file);
@@ -58,28 +64,24 @@ const ChatInterface = () => {
   };
 
   const savePdf = async (file: File | null) => {
-    try {
-      if (!file) {
-        alert("Please select a file before uploading.");
-        return;
-      }
 
+    if (!file) {
+      alert("Please select a file before uploading.");
+      return;
+    }
+
+    try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("http://localhost:8000/savePdf", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await axios.post("http://localhost:8000/savePdf", formData);
 
-      if (!response.ok) {
-        throw new Error("Couldn't save pdf in the backend");
-      } else {
-        console.log("Pdf Saved");
-      }
+      console.log("PDF saved successfully:", response.data);
+      return response.data;
+
     } catch (error) {
-      alert("Error occurred: Check console");
-      console.log(error);
+      console.error(error);
+      alert("An error occurred while saving the PDF. Check the console for details.");
     }
   };
 
@@ -104,19 +106,14 @@ const ChatInterface = () => {
       const formData = new FormData();
       formData.append("message", inputText);
 
-      const response = await fetch("http://localhost:8000/ask_question", {
-        method: "POST",
-        body: formData,
+      const response = await axios.post<MessageApiResponse>("http://localhost:8000/ask_question", formData, {
         headers: {
+          "Content-Type": "multipart/form-data",
           Accept: "application/json",
-        },
+        }
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get a response from the server");
-      }
-
-      const data = await response.json();
+      const data = response.data;
       console.log("API Response:", data);
 
       const aiMessage: Message = {
@@ -134,6 +131,7 @@ const ChatInterface = () => {
     }
   };
 
+
   return (
     <div className="flex flex-col min-h-screen w-screen">
       <SidebarProvider
@@ -146,7 +144,7 @@ const ChatInterface = () => {
       >
         <AppSidebar setIsSidebarOpen={setIsSidebarOpen} />
         <SidebarInset>
-          <header className="flex flex-col sm:flex-row items-center justify-between border-b p-4 gap-4">
+          <header className="flex flex-col sm:flex-row items-center justify-between border-b p-4 gap-4 select-none">
             <div className="flex items-center gap-2 bg-white datapx-2 rounded-xl">
               <img
                 src="/assets/AI Planet Logo.png"
@@ -156,10 +154,10 @@ const ChatInterface = () => {
             </div>
             <div className="flex items-center gap-4 w-full sm:w-auto">
               {selectedFile ? (
-                <div className="flex items-center justify-between p-0 pl-2 border rounded-md">
+                <div className="flex items-center justify-between p-0 pl-2 border  rounded-md">
                   <span>{selectedFile.name}</span>
                   <Button
-                    className="ml-2 bg-gray-100 text-black border"
+                    className="ml-2 bg-sidebar text-primary border"
                     variant="ghost"
                     size="icon"
                     onClick={handleRemoveFile}
@@ -196,14 +194,14 @@ const ChatInterface = () => {
               {messages.map((message) => (
                 <div key={message.id} className="flex items-start gap-4">
                   {/* <Avatar>
-                {message.sender === "user" ? (
-                  <AvatarFallback className="bg-purple-100 text-purple-500">
-                    {message.avatar}
-                  </AvatarFallback>
-                ) : (
-                  <img src="/assets/AIAssistant.png" alt="AI Avatar" />
-                )}
-              </Avatar> */}
+                    {message.sender === "user" ? (
+                      <AvatarFallback className="bg-purple-100 text-purple-500">
+                        {message.avatar}
+                      </AvatarFallback>
+                    ) : (
+                      <img src="/assets/AIAssistant.png" alt="AI Avatar" />
+                    )}
+                  </Avatar>  */}
                   <div className="grid gap-2.5">
                     <div className="text-sm text-gray-500">
                       {message.sender === "user" ? "You" : "AI Assistant"}

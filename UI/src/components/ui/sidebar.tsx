@@ -277,8 +277,8 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <ViewVerticalIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+    <ViewVerticalIcon />
+    <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
 })
@@ -421,7 +421,7 @@ const SidebarGroup = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="group"
-      className={cn("relative flex w-full min-w-0 flex-col p-2 py-4", className)}
+      className={cn("relative flex w-full min-w-0 flex-col p-2 pb-0 pt-4", className)}
       {...props}
     />
   )
