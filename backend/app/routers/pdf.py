@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session
 from ..database import get_db_data
 from .. import models, services, schemas
 from pdfminer.high_level import extract_text
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
 from pinecone_plugins.assistant.models.chat import Message
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -101,3 +103,47 @@ async def ask_question(message: str = Form(...)):
     except Exception as e:
         logging.error(f"Error while processing question: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
+
+
+# @router.post("/fetchDocs")
+# async def fetchDocuments(assistantName: str = Form(...)) -> dict:
+#     """Takes the Assistant name and sends all the documents uploaded to it."""
+
+#     try:
+#         assistant = pc.assistant.Assistant(
+#             assistant_name=assistantName, 
+#         )
+#         files = assistant.list_files()
+#         logging.info(f"Files fetched: {files}") 
+#         return {"files": str(files)}
+
+#     except Exception as e:
+#         logging.error(f"Error while fetching documents from assistant '{assistantName}': {str(e)}")
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Error while fetching documents: {str(e)}"
+#         )
+
+
+@router.post("/fetchDocs")
+async def fetchDocuments(assistantName: str = Form(...)) -> JSONResponse:
+    """
+    Takes the Assistant name and sends all the documents uploaded to it.
+    """
+    try:
+        assistant = pc.assistant.Assistant(
+            assistant_name=assistantName, 
+        )
+        files = assistant.list_files()
+        logging.info(f"Files fetched: {files}")
+
+        json_compatible_files = jsonable_encoder({"files": files.__dict__})
+
+        return JSONResponse(content=json_compatible_files)
+
+    except Exception as e:
+        logging.error(f"Error while fetching documents from assistant '{assistantName}': {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error while fetching documents: {str(e)}"
+        )
