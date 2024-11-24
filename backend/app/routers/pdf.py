@@ -122,28 +122,72 @@ async def ask_question(message: str = Form(...)):
 #         raise HTTPException(
 #             status_code=500,
 #             detail=f"Error while fetching documents: {str(e)}"
-#         )
+#         )3. 
 
 
-@router.post("/fetchDocs")
-async def fetchDocuments(assistantName: str = Form(...)) -> JSONResponse:
+#  helper function to properly send the documents data to the frontend
+def safe_serialize(obj):
     """
-    Takes the Assistant name and sends all the documents uploaded to it.
+    Helper function to safely serialize objects to dictionaries.
+    Handles cases where objects have attributes that are not serializable.
     """
     try:
-        assistant = pc.assistant.Assistant(
-            assistant_name=assistantName, 
-        )
-        files = assistant.list_files()
-        logging.info(f"Files fetched: {files}")
+        # Convert objects with __dict__ to dictionaries
+        if hasattr(obj, "__dict__"):
+            return {key: safe_serialize(value) for key, value in vars(obj).items()}
+        # Handle lists and iterables
+        elif isinstance(obj, list):
+            return [safe_serialize(item) for item in obj]
+        # Handle primitive types directly
+        elif isinstance(obj, (int, float, str, bool, type(None))):
+            return obj
+        # Fallback for unsupported types
+        else:
+            return str(obj)  # Convert to string for non-serializable objects
+    except Exception as e:
+        logging.error(f"Serialization error: {e}")
+        return str(obj)
 
-        json_compatible_files = jsonable_encoder({"files": files.__dict__})
+@router.post("/fetchDocs")
+async def fetch_documents(assistantName: str = Form(...)) -> JSONResponse:
+    """
+    Fetches documents uploaded to the given assistant.
+    """
+    try:
+        # Initialize the assistant instance
+        assistant = pc.assistant.Assistant(assistant_name=assistantName)
+        
+        # Fetch files and debug their structure
+        files = assistant.list_files()
+        logging.info(f"Raw files fetched: {files}")
+        
+        # Safely serialize files
+        serialized_files = safe_serialize(files)
+
+        # Ensure JSON compatibility
+        json_compatible_files = jsonable_encoder({"files": serialized_files})
 
         return JSONResponse(content=json_compatible_files)
 
     except Exception as e:
+        # Log and raise an HTTP exception on error
         logging.error(f"Error while fetching documents from assistant '{assistantName}': {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error while fetching documents: {str(e)}"
         )
+
+@router.post("/deleteDoc")
+async def delete_document(docID: str = Form(...), assistantName:str = Form(...)) -> JSONResponse:
+    """Deletes a document from pinecone assistant by recieving the doc id"""
+    
+    try:
+        print("Deleting doc with id ", docID)
+        assistant = pc.assistant.Assistant(assistant_name=assistantName)
+        response = assistant.delete_file(file_id=docID)
+        print("deleted.")
+        return JSONResponse(response)
+    
+    except Exception as e:
+        logging.error(f"Error while deleting document with ID '{docID}' from assistant '{assistantName}', error : ", {str(e)})
+        raise HTTPException(status_code=500, detail=f"Error while deleting document: {str(e)} ")

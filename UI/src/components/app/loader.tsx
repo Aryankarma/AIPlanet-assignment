@@ -3,7 +3,7 @@ import { tailspin } from "ldrs";
 import { ring2 } from "ldrs";
 import { lineSpinner } from "ldrs";
 
-const loader1 = () => {
+const Loader1 = ({ size = "25" }: { size?: string }) => {
   useEffect(() => {
     tailspin.register();
     ring2.register();
@@ -13,7 +13,7 @@ const loader1 = () => {
   return (
     <div className="flex justify-center items-center w-100 h-[500px]">
       <l-ring-2
-        size="25"
+        size={size}
         stroke="1.5"
         stroke-length="0.2"
         bg-opacity="0.30"
@@ -40,4 +40,4 @@ const loader2 = () => {
   );
 };
 
-export default loader1;
+export default Loader1;

@@ -20,8 +20,9 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Button } from "../button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import Loader1 from "@/components/app/loader";
 
 const data = {
   user: {
@@ -36,12 +37,12 @@ const data = {
       icon: FileText,
       isActive: true,
     },
-    // {
-    //   title: "Assistants",
-    //   url: "#",
-    //   icon: UserIcon,
-    //   isActive: false,
-    // },
+    {
+      title: "Assistants",
+      url: "#",
+      icon: UserIcon,
+      isActive: false,
+    },
     {
       title: "Chats",
       url: "#",
@@ -269,6 +270,29 @@ const data = {
   ],
 };
 
+interface FileModel {
+  _data_store: string;
+  _check_type: boolean;
+  _spec_property_naming: boolean;
+  _path_to_item: (string | number)[];
+  _configuration: any;
+  _visited_composed_classes: string[];
+}
+
+interface FileObject {
+  file_model: FileModel;
+  name: string;
+  created_on: string;
+  updated_on: string;
+  metadata: any;
+  status: string;
+  mime_type: string | null;
+}
+
+interface DocsResponseData {
+  files: FileObject[];
+}
+
 interface Document {
   created_on: string;
   id: string;
@@ -281,7 +305,6 @@ interface Document {
   updated_on: string;
 }
 
-
 export function AppSidebar({
   setIsSidebarOpen,
   ...props
@@ -290,63 +313,142 @@ export function AppSidebar({
 }) {
   const [activeItem, setActiveItem] = useState(data.navMain[0]);
   const [mails, setMails] = useState(data.mails);
-  const { setOpen } = useSidebar();
   const [docs, setDocs] = useState<Object>({});
-  const ASSISTANT_NAME = "aiplanetassistant"
+  const [docsLoading, setDocsLoading] = useState<boolean>(true);
+  const [docDeleteLoadingId, setDocDeleteLoadingId] = useState<string | null>(
+    null
+  );
+  const [deletedDocs, setDeletedDocs] = useState<string[]>([""])
+  const [docsError, setDocsError] = useState<string | null>(null);
 
-  
+
+  const ASSISTANT_NAME = "aiplanetassistant";
+  const { setOpen } = useSidebar();
+
   const fetchDocs = async () => {
+    setDocsLoading(true);
+    setDocsError(null);
+
     const formData = new FormData();
     formData.append("assistantName", ASSISTANT_NAME);
 
     try {
-      const response = await axios.post("http://localhost:8000/fetchDocs", formData);
-      console.log(response.data)
-
-    } catch (error) {
-      console.error(error)
+      const response: { data: DocsResponseData } = await axios.post(
+        "http://localhost:8000/fetchDocs",
+        formData
+      );
+      if (response?.data?.files) {
+        setDocs(response.data.files);
+      }
+    } catch (err) {
+      setDocsError("Failed to fetch documents");
+      console.error(err);
+    } finally {
+      setDocsLoading(false);
     }
-  }
+  };
+
+  const deleteDocument = async (DataStore: string) => {
+    console.log("DataStore from fronyend: ", DataStore);
+
+    // extracting id from dataStore string
+    const validJsonString = DataStore.replace(/'/g, '"').replace(
+      / None/g,
+      "null"
+    );
+
+    const parsedObject = JSON.parse(validJsonString);
+    const id = parsedObject.id;
+    console.log(id);
+
+    try {
+      setDocDeleteLoadingId(DataStore);
+      const formData = new FormData();
+      formData.append("docID", id);
+      formData.append("assistantName", ASSISTANT_NAME);
+
+      const response = await axios.post(
+        "http://localhost:8000/deleteDoc",
+        formData
+      );
+
+      if (response.status === 200) {
+        // add a successfully deleted doc toast here
+        // fetchDocs();
+        setDeletedDocs(prev => [...prev, DataStore])
+        setDocDeleteLoadingId(null);
+      }
+    } catch (error) {
+      console.error("error : ", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocs();
+  }, []);
+
+  useEffect(() => {
+    console.log(docs);
+  }, [docs]);
 
   const renderDocs = () => {
-    // fetch docs from the pinecone assistant
-    fetchDocs()
+    if (docsLoading) {
+      return <Loader1 />;
+    }
 
-    return [...Array(4)]
-      .flatMap(() => data.docs)
-      .map((doc) => (
-        <div className="flex-row flex justify-between	items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4">
-          <div className="flex-col flex">
-            <a
-              key={doc.id}
-              className="flex text-primary flex-col cursor-pointer"
-            >
-              {doc.name}
-            </a>
-            <span className="text-xs font-light">
-              {" "}
-              {new Date(doc.createdOn).toLocaleString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
-                hour12: true,
-              })}
-            </span>
-          </div>
-          <Button className="px-2 py-1" variant="destructive">
-            <Trash className="w-1.5 h-1.5" />
-          </Button>
+    if (docsError) {
+      return <div className="text-red-500">{docsError}</div>;
+    }
+
+    const filteredDocs = (docs as FileObject[]).filter(
+      (doc) => !deletedDocs.includes(doc?.file_model?._data_store)
+    );
+  
+
+    return filteredDocs.map((doc) => (
+      <div
+        key={doc.created_on}
+        className="flex-row flex justify-between	items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4"
+      >
+        <div className="flex-col flex">
+          <a
+            key={doc.created_on}
+            className="flex text-primary flex-col cursor-pointer text-wrap"
+          >
+            {doc.name}
+          </a>
+          <span className="text-xs font-light">
+            {new Date(doc.created_on).toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "numeric",
+              hour12: true,
+            })}
+          </span>
         </div>
-      ));
+
+        <Button
+          onClick={() => deleteDocument(doc?.file_model?._data_store)}
+          className="px-2 py-1"
+          variant="destructive"
+        >
+          {docDeleteLoadingId === doc?.file_model?._data_store ? (
+            <Loader1 size="17" />
+          ) : (
+            <Trash className="w-1.5 h-1.5" />
+          )}
+        </Button>
+      </div>
+    ));
   };
 
   const renderAssistants = () => {
     return [...Array(4)]
       .flatMap(() => data.assistants)
       .map((assistant) => (
-        <div className="flex-row flex justify-between	 items-start gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center">
+        <div className="flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center">
           <div className="flex-col flex">
             <a
               key={assistant.id}
@@ -517,7 +619,10 @@ export function AppSidebar({
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
-              <ScrollArea className="h-full overflow-y-auto scroll-smooth scrollbar-thin scrollbar-thumb-rounded-xl scrollbar-thumb-secondary scrollbar-track-transparent">
+              <ScrollArea
+                key={Date.now()}
+                className="h-full overflow-y-auto scroll-smooth scrollbar-thin scrollbar-thumb-rounded-xl scrollbar-thumb-secondary scrollbar-track-transparent"
+              >
                 {renderContent()}
               </ScrollArea>
             </SidebarGroupContent>
