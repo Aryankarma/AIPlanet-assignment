@@ -23,6 +23,13 @@ import { Button } from "../button";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Loader1 from "@/components/app/loader";
+import { FontItalicIcon } from "@radix-ui/react-icons";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const data = {
   user: {
@@ -186,88 +193,6 @@ const data = {
       createdOn: "2024-11-10T13:30:00Z",
     },
   ],
-  mails: [
-    {
-      name: "William Smith",
-      email: "williamsmith@example.com",
-      subject: "Meeting Tomorrow",
-      date: "09:34 AM",
-      teaser:
-        "Hi team, just a reminder about our meeting tomorrow at 10 AM.\nPlease come prepared with your project updates.",
-    },
-    {
-      name: "Alice Smith",
-      email: "alicesmith@example.com",
-      subject: "Re: Project Update",
-      date: "Yesterday",
-      teaser:
-        "Thanks for the update. The progress looks great so far.\nLet's schedule a call to discuss the next steps.",
-    },
-    {
-      name: "Bob Johnson",
-      email: "bobjohnson@example.com",
-      subject: "Weekend Plans",
-      date: "2 days ago",
-      teaser:
-        "Hey everyone! I'm thinking of organizing a team outing this weekend.\nWould you be interested in a hiking trip or a beach day?",
-    },
-    {
-      name: "Emily Davis",
-      email: "emilydavis@example.com",
-      subject: "Re: Question about Budget",
-      date: "2 days ago",
-      teaser:
-        "I've reviewed the budget numbers you sent over.\nCan we set up a quick call to discuss some potential adjustments?",
-    },
-    {
-      name: "Michael Wilson",
-      email: "michaelwilson@example.com",
-      subject: "Important Announcement",
-      date: "1 week ago",
-      teaser:
-        "Please join us for an all-hands meeting this Friday at 3 PM.\nWe have some exciting news to share about the company's future.",
-    },
-    {
-      name: "Sarah Brown",
-      email: "sarahbrown@example.com",
-      subject: "Re: Feedback on Proposal",
-      date: "1 week ago",
-      teaser:
-        "Thank you for sending over the proposal. I've reviewed it and have some thoughts.\nCould we schedule a meeting to discuss my feedback in detail?",
-    },
-    {
-      name: "David Lee",
-      email: "davidlee@example.com",
-      subject: "New Project Idea",
-      date: "1 week ago",
-      teaser:
-        "I've been brainstorming and came up with an interesting project concept.\nDo you have time this week to discuss its potential impact and feasibility?",
-    },
-    {
-      name: "Olivia Wilson",
-      email: "oliviawilson@example.com",
-      subject: "Vacation Plans",
-      date: "1 week ago",
-      teaser:
-        "Just a heads up that I'll be taking a two-week vacation next month.\nI'll make sure all my projects are up to date before I leave.",
-    },
-    {
-      name: "James Martin",
-      email: "jamesmartin@example.com",
-      subject: "Re: Conference Registration",
-      date: "1 week ago",
-      teaser:
-        "I've completed the registration for the upcoming tech conference.\nLet me know if you need any additional information from my end.",
-    },
-    {
-      name: "Sophia White",
-      email: "sophiawhite@example.com",
-      subject: "Team Dinner",
-      date: "1 week ago",
-      teaser:
-        "To celebrate our recent project success, I'd like to organize a team dinner.\nAre you available next Friday evening? Please let me know your preferences.",
-    },
-  ],
 };
 
 interface FileModel {
@@ -289,8 +214,21 @@ interface FileObject {
   mime_type: string | null;
 }
 
+interface AssistantObject {
+  name: string;
+  instructions: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface DocsResponseData {
   files: FileObject[];
+}
+
+interface AssistantResponseData {
+  assistants: AssistantObject[];
 }
 
 interface Document {
@@ -311,40 +249,92 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [activeItem, setActiveItem] = useState(data.navMain[0]);
-  const [mails, setMails] = useState(data.mails);
   const [docs, setDocs] = useState<Object>({});
+  const [assistants, setAssistants] = useState<Object>({});
+  const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
   const [docsLoading, setDocsLoading] = useState<boolean>(true);
-  const [docDeleteLoadingId, setDocDeleteLoadingId] = useState<string | null>(
+  const [deletingDocID, setDeletingDocID] = useState<string | null>(null);
+  const [deletedDocs, setDeletedDocs] = useState<string[]>([""]);
+  const [deletedAssistants, setDeletedAssistants] = useState<string[]>([""]);
+  const [sidebarError, setSidebarError] = useState<string | null>(null);
+  const [deletingAssistantID, setDeletingAssistantID] = useState<string | null>(
     null
   );
-  const [deletedDocs, setDeletedDocs] = useState<string[]>([""])
-  const [docsError, setDocsError] = useState<string | null>(null);
+  const [primaryAssistant, setPrimaryAssistant] = useState<string>( 
+    () => JSON.parse(localStorage.getItem("primaryAssistant") ?? JSON.stringify("aiplanetassistant"))
+  );
 
+  const [activeItem, setActiveItem] = useState<string>(
+    () => JSON.parse(localStorage.getItem("activeItem") ?? JSON.stringify("Docs"))
+  );
+
+  useEffect(() => {
+    localStorage.setItem("primaryAssistant", JSON.stringify(primaryAssistant)); // Save to localStorage
+  }, [primaryAssistant]);
+
+  useEffect(()=>{
+    localStorage.setItem("activeItem", JSON.stringify(activeItem));
+  },[activeItem])
+
+  useEffect(()=>{
+    fetchDocs();
+  },[primaryAssistant])
+
+  useEffect(() => {
+    fetchDocs();
+    fetchAssistants();
+  }, []);
 
   const ASSISTANT_NAME = "aiplanetassistant";
+  // const ASSISTANT_NAME = "assistant3";
   const { setOpen } = useSidebar();
 
   const fetchDocs = async () => {
     setDocsLoading(true);
-    setDocsError(null);
+    setSidebarError(null);
 
     const formData = new FormData();
-    formData.append("assistantName", ASSISTANT_NAME);
+    formData.append("assistantName", primaryAssistant);
 
     try {
       const response: { data: DocsResponseData } = await axios.post(
         "http://localhost:8000/fetchDocs",
         formData
       );
+      console.log("documents ", response);
       if (response?.data?.files) {
         setDocs(response.data.files);
       }
     } catch (err) {
-      setDocsError("Failed to fetch documents");
+      setSidebarError("Failed to fetch documents");
       console.error(err);
     } finally {
       setDocsLoading(false);
+    }
+  };
+
+  // send username in params when auth gets setup
+  const fetchAssistants = async () => {
+    setSidebarLoading(true);
+    setSidebarError(null);
+
+    const formData = new FormData();
+    formData.append("userName", "aryan");
+
+    try {
+      const response: { data: AssistantResponseData } = await axios.post(
+        "http://localhost:8000/getAssistants",
+        formData
+      );
+      console.log("assistants available : ", response);
+      if (response?.data?.assistants) {
+        setAssistants(response.data.assistants);
+      }
+    } catch (err) {
+      setSidebarError("Failed to fetch documents");
+      console.error(err);
+    } finally {
+      setSidebarLoading(false);
     }
   };
 
@@ -362,10 +352,10 @@ export function AppSidebar({
     console.log(id);
 
     try {
-      setDocDeleteLoadingId(DataStore);
+      setDeletingDocID(DataStore);
       const formData = new FormData();
       formData.append("docID", id);
-      formData.append("assistantName", ASSISTANT_NAME);
+      formData.append("assistantName", primaryAssistant);
 
       const response = await axios.post(
         "http://localhost:8000/deleteDoc",
@@ -375,48 +365,71 @@ export function AppSidebar({
       if (response.status === 200) {
         // add a successfully deleted doc toast here
         // fetchDocs();
-        setDeletedDocs(prev => [...prev, DataStore])
-        setDocDeleteLoadingId(null);
+        setDeletedDocs((prev) => [...prev, DataStore]);
+        setDeletingDocID(null);
       }
     } catch (error) {
       console.error("error : ", error);
     }
   };
 
-  useEffect(() => {
-    fetchDocs();
-  }, []);
+  // check this out, and rewrite (this one is not perfect)
+  const deleteAssistant = async (assistantName: string) => {
+    console.log("DataStore from fronyend: ", assistantName);
 
-  useEffect(() => {
-    console.log(docs);
-  }, [docs]);
+    try {
+      setDeletingAssistantID(assistantName);
+      const formData = new FormData();
+      formData.append("assistantName", assistantName);
+
+      const response = await axios.post(
+        "http://localhost:8000/deleteAssistant",
+        formData
+      );
+
+      if (response.status === 200) {
+        // add a successfully deleted doc toast here
+        // fetchDocs();
+        setDeletedAssistants((prev) => [...prev, assistantName]);
+        setDeletingAssistantID(null);
+      }
+    } catch (error) {
+      console.error("error : ", error);
+    }
+  };
 
   const renderDocs = () => {
     if (docsLoading) {
       return <Loader1 />;
     }
 
-    if (docsError) {
-      return <div className="text-red-500">{docsError}</div>;
+    if (sidebarError) {
+      return <span className="text-red-500 py-10 mx-auto">{sidebarError}</span>;
     }
 
     const filteredDocs = (docs as FileObject[]).filter(
       (doc) => !deletedDocs.includes(doc?.file_model?._data_store)
     );
-  
 
+    if(filteredDocs.length === 0){
+      return <div className="flex justify-center items-center w-100 h-[100px]">
+        <p className="mx-auto">No Docs Uploaded.</p>
+      </div> 
+    }
+    
     return filteredDocs.map((doc) => (
       <div
         key={doc.created_on}
         className="flex-row flex justify-between	items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4"
       >
         <div className="flex-col flex">
-          <a
+          <span
             key={doc.created_on}
-            className="flex text-primary flex-col cursor-pointer text-wrap"
+            className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
           >
             {doc.name}
-          </a>
+          </span>
+
           <span className="text-xs font-light">
             {new Date(doc.created_on).toLocaleString("en-US", {
               year: "numeric",
@@ -434,7 +447,7 @@ export function AppSidebar({
           className="px-2 py-1"
           variant="destructive"
         >
-          {docDeleteLoadingId === doc?.file_model?._data_store ? (
+          {deletingDocID === doc?.file_model?._data_store ? (
             <Loader1 size="17" />
           ) : (
             <Trash className="w-1.5 h-1.5" />
@@ -445,41 +458,71 @@ export function AppSidebar({
   };
 
   const renderAssistants = () => {
-    return [...Array(4)]
-      .flatMap(() => data.assistants)
-      .map((assistant) => (
-        <div className="flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center">
-          <div className="flex-col flex">
-            <a
-              key={assistant.id}
-              className="cursor-pointer flex text-primary flex-col"
-            >
-              {assistant.name}
-            </a>
-            <span className="text-xs font-light">
-              {" "}
-              {new Date(assistant.createdOn).toLocaleString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
-                hour12: true,
-              })}
-            </span>
-          </div>
-          <Button className="px-2 py-1" variant="destructive">
+    if (sidebarLoading) {
+      return <Loader1 />;
+    }
+
+    if (sidebarError) {
+      return <div className="text-red-500 py-10 mx-auto">{sidebarError}</div>;
+    }
+
+    const filteredAssistantData = (assistants as AssistantObject[]).filter(
+      (assistant) => !deletedAssistants.includes(assistant?.name)
+    );
+
+    return filteredAssistantData.map((assistant) => (
+      <div
+        className={`flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <div className="flex flex-col text-left">
+              <TooltipTrigger className="p-0 bg-transparent mr-auto border-none focus:outline-none hover:opacity-75">
+                <span
+                  onClick={() => setPrimaryAssistant(assistant.name)}
+                  className={`text-primary text-wrap ${
+                    assistant.name == primaryAssistant ? "text-red-500" : ""
+                  }`}
+                >
+                  {assistant.name}
+                </span>
+                <TooltipContent>
+                  <p>Set Primary</p>
+                </TooltipContent>
+              </TooltipTrigger>
+              <span className="text-xs font-light">
+                {new Date(assistant.created_at).toLocaleString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "numeric",
+                  hour12: true,
+                })}
+              </span>
+            </div>
+          </Tooltip>
+        </TooltipProvider>
+        <Button
+          onClick={() => deleteAssistant(assistant?.name)}
+          className="px-2 py-1"
+          variant="destructive"
+        >
+          {deletingAssistantID === assistant?.name ? (
+            <Loader1 size="17" />
+          ) : (
             <Trash className="w-1.5 h-1.5" />
-          </Button>
-        </div>
-      ));
+          )}
+        </Button>
+      </div>
+    ));
   };
 
   const renderChats = () => {
     return [...Array(4)]
       .flatMap(() => data.chats)
       .map((chat) => (
-        <div className="flex-row flex justify-between items-start gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
+        <div className="flex-row flex justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
           <div className="flex-col flex">
             <a
               key={chat.id}
@@ -507,7 +550,7 @@ export function AppSidebar({
   };
 
   const renderContent = () => {
-    switch (activeItem.title) {
+    switch (activeItem) {
       case "Docs":
         return renderDocs();
       case "Assistants":
@@ -520,7 +563,7 @@ export function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row select-none"
+      className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row select-none z-50"
       setIsSidebarOpen={setIsSidebarOpen}
       {...props}
     >
@@ -529,7 +572,7 @@ export function AppSidebar({
       {/* This will make the sidebar appear as icons. */}
       <Sidebar
         collapsible="none"
-        className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-secondary"
+        className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-secondary z-50"
       >
         <SidebarHeader>
           <SidebarMenu>
@@ -572,18 +615,11 @@ export function AppSidebar({
                         hidden: false,
                       }}
                       onClick={() => {
-                        setActiveItem(item);
-                        const mail = data.mails.sort(() => Math.random() - 0.5);
-                        setMails(
-                          mail.slice(
-                            0,
-                            Math.max(5, Math.floor(Math.random() * 10) + 1)
-                          )
-                        );
+                        setActiveItem(item.title);
                         setIsSidebarOpen(true);
                         setOpen(true);
                       }}
-                      isActive={activeItem.title === item.title}
+                      isActive={activeItem === item.title}
                       className="px-2.5 md:px-2 data-[active=true]:bg-sidebar-accent data-[active=true]:text-primary border-none outline-none text-primary sidebar-background hover:border-none hover:text-primary bg-transparent"
                     >
                       <item.icon />
@@ -606,11 +642,11 @@ export function AppSidebar({
 
       {/* This is the second sidebar */}
       {/* We disable collapsible and let it fill remaining space */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex">
+      <Sidebar collapsible="none" className="hidden flex-1 md:flex z-50">
         <SidebarHeader className="gap-3.5 border-b p-4 py-[18px] ">
           <div className="flex w-full items-center justify-between">
             <div className="text-base font-medium text-foreground">
-              {activeItem.title}
+              {activeItem}
             </div>
             {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
             <SidebarInput className="w-2/3" placeholder="Search Anything" />

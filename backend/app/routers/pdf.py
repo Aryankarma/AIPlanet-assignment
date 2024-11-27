@@ -127,10 +127,8 @@ async def ask_question(message: str = Form(...)):
 
 #  helper function to properly send the documents data to the frontend
 def safe_serialize(obj):
-    """
-    Helper function to safely serialize objects to dictionaries.
-    Handles cases where objects have attributes that are not serializable.
-    """
+    """Helper function to safely serialize objects to dictionaries.
+    Handles cases where objects have attributes that are not serializable."""
     try:
         # Convert objects with __dict__ to dictionaries
         if hasattr(obj, "__dict__"):
@@ -150,15 +148,14 @@ def safe_serialize(obj):
 
 @router.post("/fetchDocs")
 async def fetch_documents(assistantName: str = Form(...)) -> JSONResponse:
-    """
-    Fetches documents uploaded to the given assistant.
-    """
+    """Fetches documents uploaded to the given assistant."""
     try:
         # Initialize the assistant instance
         assistant = pc.assistant.Assistant(assistant_name=assistantName)
         
         # Fetch files and debug their structure
         files = assistant.list_files()
+        print(f"Raw files fetched: {files}")
         logging.info(f"Raw files fetched: {files}")
         
         # Safely serialize files
@@ -177,6 +174,7 @@ async def fetch_documents(assistantName: str = Form(...)) -> JSONResponse:
             detail=f"Error while fetching documents: {str(e)}"
         )
 
+
 @router.post("/deleteDoc")
 async def delete_document(docID: str = Form(...), assistantName:str = Form(...)) -> JSONResponse:
     """Deletes a document from pinecone assistant by recieving the doc id"""
@@ -189,5 +187,42 @@ async def delete_document(docID: str = Form(...), assistantName:str = Form(...))
         return JSONResponse(response)
     
     except Exception as e:
-        logging.error(f"Error while deleting document with ID '{docID}' from assistant '{assistantName}', error : ", {str(e)})
+        logging.error(f"Error while deleting document with ID {docID} from assistant {assistantName}, error : ", {str(e)})
         raise HTTPException(status_code=500, detail=f"Error while deleting document: {str(e)} ")
+    
+    
+
+@router.post("/deleteAssistant")
+async def getAssistants(assistantName: str = Form(...)) -> JSONResponse:
+    """Deletes an assistant"""
+    try:
+        print(f"deleting assistant: {assistantName}")
+        deletedAssistantResponse = pc.assistant.delete_assistant(
+            assistant_name=assistantName, 
+        )
+        print("Successfully deleted assistant, response: ", deletedAssistantResponse)
+        serialized_Response = safe_serialize(deletedAssistantResponse)
+        json_compatible_response = jsonable_encoder({"assistants": serialized_Response})
+        return JSONResponse(content=json_compatible_response)
+    
+    except Exception as e:
+        logging.error(f"Error while deleting assistant: {assistantName}, error :, {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while deleting assistant: {assistantName}")
+
+
+# make sure to add the association for each user name with assistant while making and rendering according to the name
+@router.post("/getAssistants")
+async def getAssistants(userName: str = Form(...)) -> JSONResponse:
+    """Fetch all the assistants created and then returns assistant that are associated with the particular user name"""
+
+    try:
+        print(f"fetching assistants for {userName}")
+        allAssistants = pc.assistant.list_assistants()
+        print("assistant fetched, allAssistants : ", allAssistants)
+        serialized_assistants = safe_serialize(allAssistants)
+        json_compatible_assistants = jsonable_encoder({"assistants": serialized_assistants})
+        return JSONResponse(content=json_compatible_assistants)
+    
+    except Exception as e:
+        logging.error(f"Error while fetching assistants, for username {userName}, error :, {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while fetching assistants, for username {userName}")
