@@ -30,68 +30,7 @@ interface MessageApiResponse {
 }
 
 const ChatInterface = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1732693760989,
-      text: "hey",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 1732693765741,
-      text: "Hello! How can I assist you today?",
-      sender: "ai",
-      avatar: "A",
-    },
-    {
-      id: 1732693840004,
-      text: "what can you do for me?",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 1732693846862,
-      text: "I can assist you by providing information and answering questions based on the documents and snippets available in the system. For example, if you have questions about leadership, hiring practices, or specific business strategies, I can provide insights and details from the provided snippets. Please let me know what specific information or assistance you need!",
-      sender: "ai",
-      avatar: "A",
-    },
-    {
-      id: 1732693851612,
-      text: "what else>",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 1732693859331,
-      text: 'In addition to "The Alchemist," Paulo Coelho has written several other books. Some of these include "The Pilgrimage: A Contemporary Quest for Ancient Wisdom," "The Valkyries: An Encounter with Angels," "By the River Piedra I Sat Down and Wept," "The Fifth Mountain," "The Illustrated Alchemist," and "Veronika Decides to Die" .',
-      sender: "ai",
-      avatar: "A",
-    },
-    {
-      id: 1732693851612,
-      text: "what else>",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 1732693859331,
-      text: 'In addition to "The Alchemist," Paulo Coelho has written several other books. Some of these include "The Pilgrimage: A Contemporary Quest for Ancient Wisdom," "The Valkyries: An Encounter with Angels," "By the River Piedra I Sat Down and Wept," "The Fifth Mountain," "The Illustrated Alchemist," and "Veronika Decides to Die" .',
-      sender: "ai",
-      avatar: "A",
-    },
-    {
-      id: 1732693851612,
-      text: "what else>",
-      sender: "user",
-      avatar: "S",
-    },
-    {
-      id: 1732693859331,
-      text: 'In addition to "The Alchemist," Paulo Coelho has written several other books. Some of these include "The Pilgrimage: A Contemporary Quest for Ancient Wisdom," "The Valkyries: An Encounter with Angels," "By the River Piedra I Sat Down and Wept," "The Fifth Mountain," "The Illustrated Alchemist," and "Veronika Decides to Die" .',
-      sender: "ai",
-      avatar: "A",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [inputText, setInputText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -263,7 +202,7 @@ const ChatInterface = () => {
               </div>
             </header>
             <main className="flex-1 overflow-y-auto mt-[72px] mb-[80px] p-4">
-            <div className="mx-auto max-w-4xl space-y-6">
+              <div className="mx-auto max-w-4xl space-y-6">
                 {messages.map((message) => (
                   <div key={message.id} className="flex items-start gap-4">
                     {/* <Avatar>
@@ -285,10 +224,15 @@ const ChatInterface = () => {
                 ))}
               </div>
             </main>
-            <footer className="p-4 fixed bottom-0 w-full">
-              <div className="max-w-4xl">
+            <div
+              className={`p-4 fixed bottom-0 transition-all duration-300`}
+              style={{
+                width: isSidebarOpen ? "calc(100% - 350px)" : "100%",
+              }}
+            >
+              <div className="mx-auto max-w-4xl">
                 <form
-                  className="flex items-center gap-4"
+                  className="flex items-center gap-4 shadow-md rounded-lg px-4 py-2"
                   onSubmit={sendMessage}
                 >
                   <Input
@@ -312,15 +256,13 @@ const ChatInterface = () => {
                   </Button>
                 </form>
               </div>
-            </footer>
+            </div>
           </div>
         </SidebarInset>
       </SidebarProvider>
     </div>
   );
 };
-
-export default ChatInterface;
 
 // return (
 //   <div className="flex flex-col min-h-screen w-screen">
@@ -434,3 +376,5 @@ export default ChatInterface;
 //     </SidebarProvider>
 //   </div>
 // );
+
+export default ChatInterface;
