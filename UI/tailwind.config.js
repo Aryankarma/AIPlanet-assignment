@@ -7,12 +7,20 @@ export default {
   ],  
   theme: {
   	extend: {
+		keyframes: {
+			opacityOpen: {
+				'0%': {opacity : "15%"},
+				'100%': {opacity : "100%"}
+			}
+		},
+		animation: {
+			opacityOpen: "opacityOpen 400ms"
+		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
-		
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
