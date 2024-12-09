@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-// import { Button } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Send, Upload, X } from "lucide-react";
 import { ModeToggle } from "@/components/ui/ThemeToggle";
 import { v5 as uuidv5 } from "uuid";
@@ -232,7 +229,7 @@ const ChatInterface = () => {
             >
               <div className="mx-auto max-w-4xl">
                 <form
-                  className="flex items-center gap-4 shadow-md rounded-lg px-4 py-2"
+                  className="flex items-center gap-4 rounded-lg px-4 py-2"
                   onSubmit={sendMessage}
                 >
                   <Input

@@ -30,6 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useTheme } from "../ThemeProvider";
 
 const data = {
   user: {
@@ -404,7 +405,7 @@ export function AppSidebar({
     }
 
     if (sidebarError) {
-      return <span className="text-red-500 py-10 mx-auto">{sidebarError}</span>;
+      return <span className="text-red-500 py-10 mx-auto ">{sidebarError}</span>;
     }
 
     const filteredDocs = (docs as FileObject[]).filter(
@@ -422,7 +423,7 @@ export function AppSidebar({
         key={doc.created_on}
         className="flex-row flex justify-between	items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4"
       >
-        <div className="flex-col flex">
+        <div className="flex flex-col text-left">
           <span
             key={doc.created_on}
             className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
@@ -444,8 +445,8 @@ export function AppSidebar({
 
         <Button
           onClick={() => deleteDocument(doc?.file_model?._data_store)}
-          className="px-2 py-1"
-          variant="destructive"
+          className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
+          variant="outline"
         >
           {deletingDocID === doc?.file_model?._data_store ? (
             <Loader1 size="17" />
@@ -463,7 +464,7 @@ export function AppSidebar({
     }
 
     if (sidebarError) {
-      return <div className="text-red-500 py-10 mx-auto">{sidebarError}</div>;
+      return <div className="text-red-500 py-10 mx-auto text-center">{sidebarError}</div>;
     }
 
     const filteredAssistantData = (assistants as AssistantObject[]).filter(
@@ -472,7 +473,9 @@ export function AppSidebar({
 
     return filteredAssistantData.map((assistant) => (
       <div
-        className={`flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
+      // ${assistant.name == primaryAssistant ? (useTheme().theme == 'dark' ? "bg-neutral-950" : "bg-slate-50") : ""} 
+        className={`
+          transition-all hover:bg-opacity-80 flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
       >
         <TooltipProvider>
           <Tooltip>
@@ -480,8 +483,8 @@ export function AppSidebar({
               <TooltipTrigger className="p-0 bg-transparent mr-auto border-none focus:outline-none hover:opacity-75">
                 <span
                   onClick={() => setPrimaryAssistant(assistant.name)}
-                  className={`text-primary text-wrap ${
-                    assistant.name == primaryAssistant ? "text-red-500" : ""
+                  className={`text-wrap ${
+                    assistant.name == primaryAssistant ? "text-blue-500" : ""
                   }`}
                 >
                   {assistant.name}
@@ -505,8 +508,8 @@ export function AppSidebar({
         </TooltipProvider>
         <Button
           onClick={() => deleteAssistant(assistant?.name)}
-          className="px-2 py-1"
-          variant="destructive"
+          className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
+          variant="outline"
         >
           {deletingAssistantID === assistant?.name ? (
             <Loader1 size="17" />
@@ -523,14 +526,14 @@ export function AppSidebar({
       .flatMap(() => data.chats)
       .map((chat) => (
         <div className="flex-row flex justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
-          <div className="flex-col flex">
+          <div className="flex flex-col text-left">
             <a
               key={chat.id}
               className="cursor-pointer flex text-primary flex-col pr-4"
             >
               {chat.chatName}
             </a>
-            {/* <span className="text-xs font-light">
+            <span className="text-xs font-light">
               {" "}
               {new Date(chat.createdOn).toLocaleString("en-US", {
                 year: "numeric",
@@ -540,9 +543,12 @@ export function AppSidebar({
                 minute: "numeric",
                 hour12: true,
               })}
-            </span> */}
+            </span>
           </div>
-          <Button className="px-2 py-1" variant="destructive">
+          <Button
+            className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
+            variant="outline"
+          >
             <Trash className="w-1.5 h-1.5" />
           </Button>
         </div>
