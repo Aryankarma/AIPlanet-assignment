@@ -1,4 +1,5 @@
 import * as React from "react";
+import { memo } from "react";
 import { FileText, MessageCircle, UserIcon, Trash } from "lucide-react";
 import { NavUser } from "./navUser";
 import { Label } from "@/components/ui/label";
@@ -244,12 +245,12 @@ interface Document {
   updated_on: string;
 }
 
-export function AppSidebar({
+export const AppSidebar = memo(({
   setIsSidebarOpen,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
+}) => { 
   const [docs, setDocs] = useState<Object>({});
   const [assistants, setAssistants] = useState<Object>({});
   const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
@@ -403,9 +404,9 @@ export function AppSidebar({
     if (docsLoading) {
       return <Loader1 />;
     }
-
+    
     if (sidebarError) {
-      return <span className="text-red-500 py-10 mx-auto ">{sidebarError}</span>;
+      return <div className="text-red-500 py-10 mx-auto text-center">{sidebarError}</div>;
     }
 
     const filteredDocs = (docs as FileObject[]).filter(
@@ -413,7 +414,7 @@ export function AppSidebar({
     );
 
     if(filteredDocs.length === 0){
-      return <div className="flex justify-center items-center w-100 h-[100px]">
+      return <div className="flex justify-center items-center w-100 h-[100px] ">
         <p className="mx-auto">No Docs Uploaded.</p>
       </div> 
     }
@@ -421,12 +422,12 @@ export function AppSidebar({
     return filteredDocs.map((doc) => (
       <div
         key={doc.created_on}
-        className="flex-row flex justify-between	items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4"
+        className="flex-row flex justify-between animate-opacityOpen ease-in-out items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 "
       >
         <div className="flex flex-col text-left">
           <span
             key={doc.created_on}
-            className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
+            className={`text-primary animate-opacityOpen text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
           >
             {doc.name}
           </span>
@@ -673,4 +674,4 @@ export function AppSidebar({
       </Sidebar>
     </Sidebar>
   );
-}
+})

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Send, Upload, X } from "lucide-react";
 import { ModeToggle } from "@/components/ui/ThemeToggle";
 import { v5 as uuidv5 } from "uuid";
@@ -14,6 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import axios from "axios";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import Markdown from "react-markdown";
+import { useTheme } from "@/components/ui/ThemeProvider";
+import SendMessageInput from "@/components/app/sendMessageInput";
 
 interface Message {
   id: number;
@@ -22,20 +23,97 @@ interface Message {
   avatar?: string;
 }
 
-interface MessageApiResponse {
-  message: string;
-}
-
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [inputText, setInputText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(
     () => JSON.parse(localStorage.getItem("sidebarOpen") || "false") // Load from localStorage
   );
 
-  console.log(messages);
+  // dummy states for register
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setemail] = useState('');
+  const [token, setToken] = useState<string>('');
+  const [message, setMessage] = useState('');
+
+  interface LoginResponse {
+    access_token: string;
+  }
+
+  const handleRegister = async () => {
+    alert("data sending for user reg")
+    alert(JSON.stringify({name, password, email}))
+    try {
+      const response = await axios.post(`http://localhost:8000/auth/register`, { name, password, email });
+      console.log(response.data)
+      alert("Successfully registered user")
+      listUsers()
+      return response.data;
+    } catch (error: any) {
+      alert(JSON.stringify(error.response.data.detail))
+    }
+  };
+
+  const loginUser2 = async () => {
+    try {
+      const response = await axios.post(`http://localhost:8000/auth/login`, { name, password }, {withCredentials:true});
+      listUsers()
+      console.log(response)
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { detail: 'Unexpected error occurred' };
+    }
+  };
+  
+
+  const loginUser = async () => {
+    alert(JSON.stringify({email, password}))
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+  
+      const response = await axios.post(
+        `http://localhost:8000/auth/login`,
+        formData,
+        {withCredentials:true}
+      );
+      
+      console.log("login successfull")
+      console.log(response)
+      alert(JSON.stringify(response))
+      return response.data;
+    
+    } catch (error: any) {
+      throw error.response?.data || { detail: "Unexpected error occurred" };
+    }
+  };
+  
+  const handleLogin = async () => { 
+    try {
+      const response = await loginUser();
+      console.log(response);
+      setMessage('Login successful!');
+      alert("Login successful");
+    } catch (error: any) {
+      setMessage(error.detail || 'Login failed');
+      console.error('Login error:', error);
+    }
+  };
+  
+  
+  const listUsers = async () => {
+    try {
+      const response = await axios.get(`http://localhost:8000/auth/users`);
+      console.log(response.data)
+      alert("fetched")
+      return response.data;
+    } catch (error: any) {
+      alert(error.response.data.detail)
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen)); // Save to localStorage
@@ -88,56 +166,6 @@ const ChatInterface = () => {
     }
   };
 
-  const sendMessage = async (event: FormEvent) => {
-    event.preventDefault();
-
-    if (!inputText.trim()) {
-      alert("Please enter a question.");
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now(),
-      text: inputText,
-      sender: "user",
-      avatar: "S",
-    };
-
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-
-    try {
-      const formData = new FormData();
-      formData.append("message", inputText);
-
-      const response = await axios.post<MessageApiResponse>(
-        "http://localhost:8000/ask_question",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const data = response.data;
-      console.log("API Response:", data);
-
-      const aiMessage: Message = {
-        id: Date.now(),
-        text: data.message || "Sorry, I couldn't understand that.",
-        sender: "ai",
-        avatar: "A",
-      };
-
-      setMessages((prevMessages) => [...prevMessages, aiMessage]);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setInputText("");
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen w-screen">
       <SidebarProvider
@@ -149,6 +177,7 @@ const ChatInterface = () => {
         open={isSidebarOpen}
       >
         <AppSidebar setIsSidebarOpen={setIsSidebarOpen} />
+
         <SidebarInset>
           <div className="flex flex-col h-screen">
             <header className="fixed top-0 left-0 right-0 z-10 flex flex-col sm:flex-row items-center justify-between border-b border-secondary p-4 gap-4 select-none">
@@ -159,6 +188,28 @@ const ChatInterface = () => {
                   className="hidden h-10 w-full"
                 />
               </div>
+              <input
+                placeholder="Full name"
+                value={name}
+                className="w-40"
+                onChange={(e) => setName(e.target.value)}
+                />
+              <input
+                placeholder="Password"
+                type="password"
+                className="w-40"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                />
+              <input
+                placeholder="email"
+                type="email"
+                className="w-40"
+                value={email}
+                onChange={(e) => setemail(e.target.value)}
+              />
+               {/* <button onClick={handleLogin}>Login</button> */}
+              <button onClick={loginUser}>Register</button>
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 {selectedFile ? (
                   <div className="flex items-center justify-between p-0 pl-2 border  rounded-md">
@@ -201,7 +252,10 @@ const ChatInterface = () => {
             <main className="flex-1 overflow-y-auto mt-[72px] mb-[80px] p-4">
               <div className="mx-auto max-w-4xl space-y-6">
                 {messages.map((message) => (
-                  <div key={message.id} className="flex items-start gap-4 animate-opacityOpen ">
+                  <div
+                    key={message.id}
+                    className="flex items-start gap-4 animate-opacityOpen "
+                  >
                     {/* <Avatar>
                     {message.sender === "user" ? (
                       <AvatarFallback className="bg-purple-100 text-purple-500">
@@ -211,49 +265,30 @@ const ChatInterface = () => {
                       <img src="/assets/AIAssistant.png" alt="AI Avatar" />
                     )}
                   </Avatar>  */}
-                    <div className="grid gap-1.5">
-                      <div className="text-sm text-gray-500">
-                        {message.sender === "user" ? "You" : "AI Assistant" }
+                    <div className="text-sm grid gap-1.5">
+                      <div className="text-gray-500">
+                        {message.sender === "user" ? "You" : "AI Assistant"}
                       </div>
-                      <div className="text-sm">{message.text}</div>
+                      <div
+                        className={`prose w-full max-w-none ${
+                          useTheme().theme === "dark"
+                            ? "prose-invert text-gray-300"
+                            : null
+                        }`}
+                      >
+                        <Markdown>{message.text}</Markdown>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </main>
-            <div
-              className={`p-4 fixed bottom-0 transition-all duration-300`}
-              style={{
-                width: isSidebarOpen ? "calc(100% - 350px)" : "100%",
-              }}
-            >
-              <div className="mx-auto max-w-4xl">
-                <form
-                  className="flex items-center gap-4 rounded-lg px-4 py-2"
-                  onSubmit={sendMessage}
-                >
-                  <Input
-                    className="flex-1 py-6 shadow-md"
-                    placeholder="Send a message..."
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                  />
-                  <Button
-                    size="icon"
-                    className="p-6 shadow-md"
-                    type="submit"
-                    variant={"outline"}
-                  >
-                    <Send
-                      className="h-4 w-4"
-                      style={{ rotate: "45deg", translate: "-2px" }}
-                    />
-                    <span className="sr-only">Send message</span>
-                  </Button>
-                </form>
-              </div>
-            </div>
+
+            {/* Message input here */}
+            <SendMessageInput
+              setMessages={setMessages}
+              isSidebarOpen={isSidebarOpen}
+            />
           </div>
         </SidebarInset>
       </SidebarProvider>

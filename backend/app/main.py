@@ -1,8 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from .routers import pdf
-from .database import engine, Base
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import auth, pdf
 
 app = FastAPI()
 
@@ -14,13 +12,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(pdf.router)
+
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
 
 @app.get("/greet/{name}")
-def read_root(name: str):
+def greet_user(name: str):
     return {"message": f"Hey {name}"}
-
-Base.metadata.create_all(bind=engine)
-app.include_router(pdf.router)

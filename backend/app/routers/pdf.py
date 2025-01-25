@@ -6,8 +6,6 @@ import tempfile
 from pinecone import Pinecone
 from typing import Annotated
 from dotenv import load_dotenv
-from ..models import PdfDocument
-from sqlalchemy.orm import Session
 from ..database import get_db_data
 from .. import models, services, schemas
 from pdfminer.high_level import extract_text
