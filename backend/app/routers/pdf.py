@@ -8,11 +8,11 @@ from typing import Annotated
 from dotenv import load_dotenv
 from ..database import get_db_data
 from .. import models, services, schemas
-from pdfminer.high_level import extract_text
-from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
-from pinecone_plugins.assistant.models.chat import Message
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from pdfminer.high_level import extract_text
+from fastapi.encoders import jsonable_encoder
+from pinecone_plugins.assistant.models.chat import Message
+from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ def get_or_create_assistant(assistant_name: str):
     assistant_names = []
     for assistant in assistants:
         assistant_names.append(assistant.name) 
-    print("Listing assistants: ", assistant_names)
+    # print("Listing assistants: ", assistant_names)
 
     assistant_found = None
     for assistant in assistants:
@@ -89,18 +89,43 @@ async def ask_question(message: str = Form(...)):
     """Handles user questions and sends them to the Pinecone assistant."""
     
     try:
-        print("chatting with assistant")
+        # print("chatting with assistant")
         assistant = get_or_create_assistant(ASSISTANT_NAME)
         msg = Message(content=message)
         response = assistant.chat(messages=[msg])
         
-        print(response.message)
+        # print(response.message)
             
         return {"message": str(response.message.content)}
     
     except Exception as e:
         logging.error(f"Error while processing question: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
+
+
+
+# for a streaming response
+
+# @router.post("/ask_question")
+# async def ask_question(message: str = Form(...)):
+#     """Handles user questions and sends them to the Pinecone assistant."""
+    
+#     try:
+#         assistant = get_or_create_assistant(ASSISTANT_NAME)
+#         msg = Message(content=message)
+
+#         response = assistant.chat(messages=[msg], stream=True)
+        
+#         def stream_response():
+#             for data in response:
+#                 if data:
+#                     yield data.message.content + "\n"
+
+#         return StreamingResponse(stream_response(), media_type="text/plain")
+
+#     except Exception as e:
+#         logging.error(f"Error while processing question: {str(e)}")
+#         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
 
 
 # @router.post("/fetchDocs")
@@ -110,7 +135,7 @@ async def ask_question(message: str = Form(...)):
 #     try:
 #         assistant = pc.assistant.Assistant(
 #             assistant_name=assistantName, 
-#         )
+#         )3
 #         files = assistant.list_files()
 #         logging.info(f"Files fetched: {files}") 
 #         return {"files": str(files)}
@@ -153,7 +178,7 @@ async def fetch_documents(assistantName: str = Form(...)) -> JSONResponse:
         
         # Fetch files and debug their structure
         files = assistant.list_files()
-        print(f"Raw files fetched: {files}")
+        # print(f"Raw files fetched: {files}")
         logging.info(f"Raw files fetched: {files}")
         
         # Safely serialize files
@@ -178,7 +203,7 @@ async def delete_document(docID: str = Form(...), assistantName:str = Form(...))
     """Deletes a document from pinecone assistant by recieving the doc id"""
     
     try:
-        print("Deleting doc with id ", docID)
+        # print("Deleting doc with id ", docID)
         assistant = pc.assistant.Assistant(assistant_name=assistantName)
         response = assistant.delete_file(file_id=docID)
         print("deleted.")
@@ -216,7 +241,7 @@ async def getAssistants(userName: str = Form(...)) -> JSONResponse:
     try:
         print(f"fetching assistants for {userName}")
         allAssistants = pc.assistant.list_assistants()
-        print("assistant fetched, allAssistants : ", allAssistants)
+        # print("assistant fetched, allAssistants : ", allAssistants)
         serialized_assistants = safe_serialize(allAssistants)
         json_compatible_assistants = jsonable_encoder({"assistants": serialized_assistants})
         return JSONResponse(content=json_compatible_assistants)

@@ -32,11 +32,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTheme } from "../ThemeProvider";
+import { Search } from 'lucide-react';
+import nProgress from "nprogress";
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "Aryan Karma",
+    email: "aryankarma29@gmail.com",
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
@@ -293,6 +295,7 @@ export const AppSidebar = memo(({
 
   const fetchDocs = async () => {
     setDocsLoading(true);
+    nProgress.start()
     setSidebarError(null);
 
     const formData = new FormData();
@@ -311,6 +314,7 @@ export const AppSidebar = memo(({
       setSidebarError("Failed to fetch documents");
       console.error(err);
     } finally {
+      nProgress.done()
       setDocsLoading(false);
     }
   };
@@ -324,6 +328,7 @@ export const AppSidebar = memo(({
     formData.append("userName", "aryan");
 
     try {
+      nProgress.start()
       const response: { data: AssistantResponseData } = await axios.post(
         "http://localhost:8000/getAssistants",
         formData
@@ -336,6 +341,7 @@ export const AppSidebar = memo(({
       setSidebarError("Failed to fetch documents");
       console.error(err);
     } finally {
+      nProgress.done()
       setSidebarLoading(false);
     }
   };
@@ -354,6 +360,7 @@ export const AppSidebar = memo(({
     console.log(id);
 
     try {
+      nProgress.start()
       setDeletingDocID(DataStore);
       const formData = new FormData();
       formData.append("docID", id);
@@ -372,6 +379,8 @@ export const AppSidebar = memo(({
       }
     } catch (error) {
       console.error("error : ", error);
+    } finally {
+      nProgress.done()
     }
   };
 
@@ -380,6 +389,7 @@ export const AppSidebar = memo(({
     console.log("DataStore from fronyend: ", assistantName);
 
     try {
+      nProgress.start()
       setDeletingAssistantID(assistantName);
       const formData = new FormData();
       formData.append("assistantName", assistantName);
@@ -397,6 +407,8 @@ export const AppSidebar = memo(({
       }
     } catch (error) {
       console.error("error : ", error);
+    } finally {
+      nProgress.done()
     }
   };
 
@@ -427,7 +439,7 @@ export const AppSidebar = memo(({
         <div className="flex flex-col text-left">
           <span
             key={doc.created_on}
-            className={`text-primary animate-opacityOpen text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
+            className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
           >
             {doc.name}
           </span>
@@ -476,7 +488,7 @@ export const AppSidebar = memo(({
       <div
       // ${assistant.name == primaryAssistant ? (useTheme().theme == 'dark' ? "bg-neutral-950" : "bg-slate-50") : ""} 
         className={`
-          transition-all hover:bg-opacity-80 flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
+          transition-all animate-opacityOpen hover:bg-opacity-80 flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
       >
         <TooltipProvider>
           <Tooltip>
@@ -526,11 +538,11 @@ export const AppSidebar = memo(({
     return [...Array(4)]
       .flatMap(() => data.chats)
       .map((chat) => (
-        <div className="flex-row flex justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
+        <div className="flex-row flex animate-opacityOpen justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
           <div className="flex flex-col text-left">
             <a
               key={chat.id}
-              className="cursor-pointer flex text-primary flex-col pr-4"
+              className="cursor-pointer flex text-primary hover:opacity-75 flex-col pr-4"
             >
               {chat.chatName}
             </a>
@@ -656,7 +668,7 @@ export const AppSidebar = memo(({
               {activeItem}
             </div>
             {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
-            <SidebarInput className="w-2/3" placeholder="Search Anything" />
+            <SidebarInput className="w-2/3" placeholder="Search Anything" /> 
           </div>
         </SidebarHeader>
         <SidebarContent>

@@ -9,12 +9,12 @@ export default {
   	extend: {
 		keyframes: {
 			opacityOpen: {
-				'0%': {opacity : "15%"},
+				'0%': {opacity: "60%"},
 				'100%': {opacity : "100%"}
 			}
 		},
 		animation: {
-			opacityOpen: "opacityOpen 400ms"
+			opacityOpen: "opacityOpen 250ms"
 		},
   		borderRadius: {
   			lg: 'var(--radius)',

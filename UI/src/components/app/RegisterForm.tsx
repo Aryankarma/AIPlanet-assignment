@@ -16,6 +16,7 @@ import z from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
+import nProgress from "nprogress";
 
 export function RegisterForm({
   className,
@@ -24,7 +25,11 @@ export function RegisterForm({
   const formSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8).max(50),
+    confirmPassword: z.string(),
     name: z.string().min(3).max(50),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -32,32 +37,40 @@ export function RegisterForm({
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
       name: "",
     },
   });
 
   const registerUser = async (values: z.infer<typeof formSchema>) => {
-    alert(JSON.stringify(values))
     try {
-      const response = await axios.post(`http://localhost:8000/auth/register`, { name: values.name, password: values.password, email: values.email });
-      alert("alerting response data")
-      alert(JSON.stringify(response.data))
-      alert("Successfully registered user")
-      listUsers()
+      nProgress.start()
+      const response = await axios.post(`http://localhost:8000/auth/register`, {
+        name: values.name,
+        password: values.password,
+        email: values.email
+      });
+      alert("Successfully registered user");
+      listUsers();
       return response.data;
     } catch (error: any) {
-      alert(JSON.stringify(error.response.data.detail))
+      alert(JSON.stringify(error.response.data.detail));
+    } finally {
+      nProgress.done()
     }
   };
 
   const listUsers = async () => {
     try {
+      nProgress.start()
       const response = await axios.get(`http://localhost:8000/auth/users`);
-      console.log(response.data)
-      alert("fetched")
+      console.log(response.data);
+      alert("fetched");
       return response.data;
     } catch (error: any) {
-      alert(error.response.data.detail)
+      alert(error.response.data.detail);
+    } finally {
+      nProgress.done()
     }
   };
 
@@ -66,9 +79,6 @@ export function RegisterForm({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Create Your Account</CardTitle>
-          {/* <CardDescription>
-            Get started with our productivity platform
-          </CardDescription> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(registerUser)}>
@@ -108,25 +118,9 @@ export function RegisterForm({
                   )}
                 </div>
                 <div className="grid gap-2">
-                  {/* <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="•••••••••••"
-                    required
-                  /> */}
                   <Label className="text-start" htmlFor="password">
                     Password
                   </Label>
-                  {/* <Input
-                    id="password"
-                    type="password"
-                    placeholder="•••••••••••"
-                    required
-                    {...form.register("password")}
-                  /> */}
                   <Controller
                     name="password"
                     control={form.control}
@@ -143,16 +137,28 @@ export function RegisterForm({
                       {form.formState.errors.password.message}
                     </p>
                   )}
-                  {/* <p className="text-xs text-start font-extralight">
-                    Must be at least 8 characters
-                  </p> */}
                 </div>
-                {/* <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="confirm-password">Confirm password</Label>
-                  </div>
-                  <Input id="password" type="password" placeholder="•••••••••••" required />
-                </div> */}
+                <div className="grid gap-2">
+                  <Label className="text-start" htmlFor="confirmPassword">
+                    Confirm Password
+                  </Label>
+                  <Controller
+                    name="confirmPassword"
+                    control={form.control}
+                    render={({ field }) => (
+                      <PasswordInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="••••••••••"
+                      />
+                    )}
+                  />
+                  {form.formState.errors.confirmPassword && (
+                    <p className="text-red-500 text-sm text-start">
+                      {form.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
                 <Button type="submit" className="w-full">
                   Register
                 </Button>
@@ -167,10 +173,12 @@ export function RegisterForm({
           </form>
         </CardContent>
       </Card>
-      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
+      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary">
         By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
         and <a href="#">Privacy Policy</a>.
       </div>
     </div>
   );
 }
+
+export default RegisterForm;

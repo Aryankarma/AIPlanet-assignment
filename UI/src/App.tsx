@@ -6,6 +6,7 @@ import { Layout } from "./components/layout";
 import ForgotPassword from './pages/ForgotPassword'
 import LoadingProgress from "./components/app/LoadingProgress";
 import VerifyEmail from "./pages/verifyEmail";
+import NProgressLoader from "./components/app/Progress";
 
 const isAuthenticated = () => {
   // Authentication Logic
@@ -17,6 +18,7 @@ function App() {
   return (
     <Layout>
       {/* <LoadingProgress /> */}
+      <NProgressLoader />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

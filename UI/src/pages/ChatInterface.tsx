@@ -15,6 +15,8 @@ import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import Markdown from "react-markdown";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import SendMessageInput from "@/components/app/sendMessageInput";
+import { Link } from "react-router-dom";
+import NProgress from "nprogress";
 
 interface Message {
   id: number;
@@ -32,86 +34,91 @@ const ChatInterface = () => {
   );
 
   // dummy states for register
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setemail] = useState('');
-  const [token, setToken] = useState<string>('');
-  const [message, setMessage] = useState('');
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [email, setemail] = useState("");
+  const [token, setToken] = useState<string>("");
+  const [message, setMessage] = useState("");
 
   interface LoginResponse {
     access_token: string;
   }
 
   const handleRegister = async () => {
-    alert("data sending for user reg")
-    alert(JSON.stringify({name, password, email}))
+    alert("data sending for user reg");
+    alert(JSON.stringify({ name, password, email }));
     try {
-      const response = await axios.post(`http://localhost:8000/auth/register`, { name, password, email });
-      console.log(response.data)
-      alert("Successfully registered user")
-      listUsers()
+      const response = await axios.post(`http://localhost:8000/auth/register`, {
+        name,
+        password,
+        email,
+      });
+      console.log(response.data);
+      alert("Successfully registered user");
+      listUsers();
       return response.data;
     } catch (error: any) {
-      alert(JSON.stringify(error.response.data.detail))
+      alert(JSON.stringify(error.response.data.detail));
     }
   };
 
   const loginUser2 = async () => {
     try {
-      const response = await axios.post(`http://localhost:8000/auth/login`, { name, password }, {withCredentials:true});
-      listUsers()
-      console.log(response)
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { detail: 'Unexpected error occurred' };
-    }
-  };
-  
-
-  const loginUser = async () => {
-    alert(JSON.stringify({email, password}))
-    try {
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
-  
       const response = await axios.post(
         `http://localhost:8000/auth/login`,
-        formData,
-        {withCredentials:true}
+        { name, password },
+        { withCredentials: true }
       );
-      
-      console.log("login successfull")
-      console.log(response)
-      alert(JSON.stringify(response))
+      listUsers();
+      console.log(response);
       return response.data;
-    
     } catch (error: any) {
       throw error.response?.data || { detail: "Unexpected error occurred" };
     }
   };
-  
-  const handleLogin = async () => { 
+
+  const loginUser = async () => {
+    alert(JSON.stringify({ email, password }));
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+
+      const response = await axios.post(
+        `http://localhost:8000/auth/login`,
+        formData,
+        { withCredentials: true }
+      );
+
+      console.log("login successfull");
+      console.log(response);
+      alert(JSON.stringify(response));
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { detail: "Unexpected error occurred" };
+    }
+  };
+
+  const handleLogin = async () => {
     try {
       const response = await loginUser();
       console.log(response);
-      setMessage('Login successful!');
+      setMessage("Login successful!");
       alert("Login successful");
     } catch (error: any) {
-      setMessage(error.detail || 'Login failed');
-      console.error('Login error:', error);
+      setMessage(error.detail || "Login failed");
+      console.error("Login error:", error);
     }
   };
-  
-  
+
   const listUsers = async () => {
     try {
       const response = await axios.get(`http://localhost:8000/auth/users`);
-      console.log(response.data)
-      alert("fetched")
+      console.log(response.data);
+      alert("fetched");
       return response.data;
     } catch (error: any) {
-      alert(error.response.data.detail)
+      alert(error.response.data.detail);
     }
   };
 
@@ -148,6 +155,7 @@ const ChatInterface = () => {
     }
 
     try {
+      console.log("save pdf function start");
       const formData = new FormData();
       formData.append("file", file);
 
@@ -163,6 +171,8 @@ const ChatInterface = () => {
       alert(
         "An error occurred while saving the PDF. Check the console for details."
       );
+    } finally {
+      console.log("save pdf function done")
     }
   };
 
@@ -188,7 +198,7 @@ const ChatInterface = () => {
                   className="hidden h-10 w-full"
                 />
               </div>
-              <input
+              {/* <input
                 placeholder="Full name"
                 value={name}
                 className="w-40"
@@ -207,9 +217,10 @@ const ChatInterface = () => {
                 className="w-40"
                 value={email}
                 onChange={(e) => setemail(e.target.value)}
-              />
-               {/* <button onClick={handleLogin}>Login</button> */}
-              <button onClick={loginUser}>Register</button>
+              /> */}
+              {/* <button onClick={handleLogin}>Login</button> */}
+              {/* <button onClick={loginUser}>Register</button> */}
+              {/* <Link to="/login">Go to login</Link> */}
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 {selectedFile ? (
                   <div className="flex items-center justify-between p-0 pl-2 border  rounded-md">
@@ -250,7 +261,7 @@ const ChatInterface = () => {
               </div>
             </header>
             <main className="flex-1 overflow-y-auto mt-[72px] mb-[80px] p-4">
-              <div className="mx-auto max-w-4xl space-y-6">
+              <div className="mx-auto max-w-[800px] space-y-6">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -265,12 +276,12 @@ const ChatInterface = () => {
                       <img src="/assets/AIAssistant.png" alt="AI Avatar" />
                     )}
                   </Avatar>  */}
-                    <div className="text-sm grid gap-1.5">
+                    <div className="text-base grid gap-1.5 text-start">
                       <div className="text-gray-500">
                         {message.sender === "user" ? "You" : "AI Assistant"}
                       </div>
                       <div
-                        className={`prose w-full max-w-none ${
+                        className={`prose w-full max-w-none flex flex-col gap-3 leading-loose ${
                           useTheme().theme === "dark"
                             ? "prose-invert text-gray-300"
                             : null

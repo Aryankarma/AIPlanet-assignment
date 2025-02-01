@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
+import nProgress from "nprogress";
 
 export default function VerifyEmail() {
   const [verificationStatus, setVerificationStatus] = useState<
@@ -33,11 +34,11 @@ export default function VerifyEmail() {
 
   const verifyEmail = async (token: string) => {
     try {
+      nProgress.start()
       const response = await axios.post<{ message: string }>(
-        "/api/verify-email",
+        "http://localhost:8000/auth/verify-email",
         { token }
       );
-
       // Success handling
       setVerificationStatus("success");
       setMessage(response.data.message);
@@ -56,8 +57,29 @@ export default function VerifyEmail() {
         title: "Error",
         description: error.response?.data?.detail || "Failed to verify email",
       });
+    } finally {
+      nProgress.done()
     }
   };
+
+
+  // const verifyUser = async (values: z.infer<typeof formSchema>) => {
+  //   alert(JSON.stringify(values))
+  //   try {
+
+      
+  //     const response = await axios.post(
+  //       `http://localhost:8000/auth/login`,
+  //       formData,
+  //       {withCredentials:true}
+  //     );
+  //     alert("login successfull")
+  //     alert(JSON.stringify(response.data))
+  //     return response.data;
+  //   } catch (error: any) {
+  //     throw error.response?.data || { detail: "Unexpected error occurred" };
+  //   }
+  // };
 
   const variants = {
     hidden: { opacity: 0, y: 50 },

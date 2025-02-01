@@ -16,6 +16,7 @@ import z from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
+import nProgress from "nprogress";
 
 export function LoginForm({
   className,
@@ -35,32 +36,33 @@ export function LoginForm({
   });
 
   const loginUser = async (values: z.infer<typeof formSchema>) => {
-    alert(JSON.stringify(values))
+    alert(JSON.stringify(values));
     try {
+      nProgress.start();
       const formData = new FormData();
       formData.append("email", values.email);
       formData.append("password", values.password);
-  
+
       const response = await axios.post(
         `http://localhost:8000/auth/login`,
         formData,
-        {withCredentials:true}
+        { withCredentials: true }
       );
-      alert("login successfull")
-      alert(JSON.stringify(response.data))
+      alert("login successfull");
+      alert(JSON.stringify(response.data));
       return response.data;
     } catch (error: any) {
       throw error.response?.data || { detail: "Unexpected error occurred" };
+    } finally {
+      nProgress.done();
     }
-
   };
-
   // const loginUser = async () => {
   //   try {
-      // const formData = new FormData();
+  // const formData = new FormData();
   //     formData.append("username", username);
   //     formData.append("password", password);
-  
+
   //     const response = await axios.post(
   //       `http://localhost:8000/auth/login`,
   //       formData,
@@ -72,12 +74,14 @@ export function LoginForm({
   //     throw error.response?.data || { detail: "Unexpected error occurred" };
   //   }
   // };
-  
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
+          <CardTitle className="text-xl">
+            Welcome back - <Link to={"/chat"}>Go to Chat</Link>
+          </CardTitle>
           {/* <CardDescription>
             Login with your Apple or Google account
           </CardDescription> */}
