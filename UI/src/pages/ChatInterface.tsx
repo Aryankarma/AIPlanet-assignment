@@ -17,6 +17,7 @@ import { useTheme } from "@/components/ui/ThemeProvider";
 import SendMessageInput from "@/components/app/sendMessageInput";
 import { Link } from "react-router-dom";
 import NProgress from "nprogress";
+import myAxios from "@/lib/axios";
 
 interface Message {
   id: number;
@@ -48,7 +49,7 @@ const ChatInterface = () => {
     alert("data sending for user reg");
     alert(JSON.stringify({ name, password, email }));
     try {
-      const response = await axios.post(`http://localhost:8000/auth/register`, {
+      const response = await myAxios.post(`http://localhost:8000/auth/register`, {
         name,
         password,
         email,
@@ -64,7 +65,7 @@ const ChatInterface = () => {
 
   const loginUser2 = async () => {
     try {
-      const response = await axios.post(
+      const response = await myAxios.post(
         `http://localhost:8000/auth/login`,
         { name, password },
         { withCredentials: true }
@@ -84,7 +85,7 @@ const ChatInterface = () => {
       formData.append("email", email);
       formData.append("password", password);
 
-      const response = await axios.post(
+      const response = await myAxios.post(
         `http://localhost:8000/auth/login`,
         formData,
         { withCredentials: true }
@@ -113,7 +114,7 @@ const ChatInterface = () => {
 
   const listUsers = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/auth/users`);
+      const response = await myAxios.get(`http://localhost:8000/auth/users`);
       console.log(response.data);
       alert("fetched");
       return response.data;
@@ -159,7 +160,7 @@ const ChatInterface = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await axios.post(
+      const response = await myAxios.post(
         "http://localhost:8000/savePdf",
         formData
       );

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Upload, X } from "lucide-react";
 import axios from "axios";
 import NProgress from "nprogress";
+import myAxios from "@/lib/axios";
 
 interface MessageApiResponse {
   message: string;
@@ -53,7 +54,7 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
       formData.append("message", inputText);
       setInputText("");
 
-      const response = await axios.post<MessageApiResponse>(
+      const response = await myAxios.post<MessageApiResponse>(
         "http://localhost:8000/ask_question",
         formData,
         {
@@ -103,11 +104,11 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
     >
       <div className="relative w-full">
         <form
-          className="flex items-center rounded-xl max-w-[800px] mx-auto border-2 hover:border-gray-500 active:border-1 transition-all focus-visible:border-gray-300 relative"
+          className="flex items-center rounded-xl max-w-[800px] mx-auto border-2 border-secondary hover:border-gray-500 active:border-1 transition-all relative hover:border-opacity-50"
           onSubmit={sendMessage}
         >
           <Input
-            className="py-6 shadow-md border-none w-[800px] active:border-none focus:border-none focus-visible::border-none focus-within::border-none focus-visible:ring-transparent"
+            className="py-6 border-none w-[800px] active:border-none focus:border-none focus-visible::border-none focus-within::border-none focus-visible:ring-transparent"
             placeholder="Send a message..."
             type="text"
             value={inputText}

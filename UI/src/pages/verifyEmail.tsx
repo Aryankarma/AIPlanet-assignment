@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
 import nProgress from "nprogress";
+import myAxios from "@/lib/axios";
 
 export default function VerifyEmail() {
   const [verificationStatus, setVerificationStatus] = useState<
     "loading" | "success" | "error"
   >("loading");
   const [message, setMessage] = useState("");
-  const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -25,8 +25,7 @@ export default function VerifyEmail() {
       setVerificationStatus("error");
       const noTokenMessage = "No verification token found.";
       setMessage(noTokenMessage);
-      toast({
-        title: "Error",
+      toast("Error", {
         description: noTokenMessage,
       });
     }
@@ -34,41 +33,38 @@ export default function VerifyEmail() {
 
   const verifyEmail = async (token: string) => {
     try {
-      nProgress.start()
-      const response = await axios.post<{ message: string }>(
+      nProgress.start();
+      const response = await myAxios.post<{ message: string }>(
         "http://localhost:8000/auth/verify-email",
         { token }
       );
       // Success handling
       setVerificationStatus("success");
       setMessage(response.data.message);
-      toast({
-        title: "Success",
+      toast("Success", {
         description: response.data.message,
       });
-
-      // Navigate if needed
-      navigate("/chat");
+            
     } catch (error: any) {
       // Generic error handling
       setVerificationStatus("error");
       setMessage(error.response?.data?.detail || "Failed to verify email");
-      toast({
-        title: "Error",
+      toast("Error", {
         description: error.response?.data?.detail || "Failed to verify email",
       });
     } finally {
-      nProgress.done()
+      nProgress.done();
+      setTimeout(()=>{
+        window.location.reload()
+      }, 2000)
     }
   };
-
 
   // const verifyUser = async (values: z.infer<typeof formSchema>) => {
   //   alert(JSON.stringify(values))
   //   try {
 
-      
-  //     const response = await axios.post(
+  //     const response = await myAxios.post(
   //       `http://localhost:8000/auth/login`,
   //       formData,
   //       {withCredentials:true}

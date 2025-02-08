@@ -34,6 +34,7 @@ import {
 import { useTheme } from "../ThemeProvider";
 import { Search } from 'lucide-react';
 import nProgress from "nprogress";
+import myAxios from "@/lib/axios";
 
 const data = {
   user: {
@@ -302,9 +303,13 @@ export const AppSidebar = memo(({
     formData.append("assistantName", primaryAssistant);
 
     try {
-      const response: { data: DocsResponseData } = await axios.post(
+    const response: { data: DocsResponseData } = await myAxios.post(
         "http://localhost:8000/fetchDocs",
-        formData
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
       console.log("documents ", response);
       if (response?.data?.files) {
@@ -329,9 +334,13 @@ export const AppSidebar = memo(({
 
     try {
       nProgress.start()
-      const response: { data: AssistantResponseData } = await axios.post(
+      const response: { data: AssistantResponseData } = await myAxios.post(
         "http://localhost:8000/getAssistants",
-        formData
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
       console.log("assistants available : ", response);
       if (response?.data?.assistants) {
@@ -366,9 +375,13 @@ export const AppSidebar = memo(({
       formData.append("docID", id);
       formData.append("assistantName", primaryAssistant);
 
-      const response = await axios.post(
+      const response = await myAxios.post(
         "http://localhost:8000/deleteDoc",
-        formData
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       if (response.status === 200) {
@@ -394,9 +407,13 @@ export const AppSidebar = memo(({
       const formData = new FormData();
       formData.append("assistantName", assistantName);
 
-      const response = await axios.post(
+      const response = await myAxios.post(
         "http://localhost:8000/deleteAssistant",
-        formData
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       if (response.status === 200) {

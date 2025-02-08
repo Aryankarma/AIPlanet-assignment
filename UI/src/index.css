@@ -182,10 +182,10 @@ button:focus-visible {
 
 /* Change the progress bar color */
 #nprogress .bar {
-  background: #cccccc !important; /* Change to any color */
+  background: #999999 !important /* Change to any color */
 }
 
 /* Change the trailing effect */
 #nprogress .peg {
-  box-shadow: 0 0 10px #555555, 0 0 5px #555555 !important;
+  box-shadow: 0 0 10px #777777, 0 0 5px #777777 !important
 }
