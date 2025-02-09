@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth/authContext";
+import { BlurFade } from "@/components/ui/blurFade";
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -144,6 +145,8 @@ const LandingPage = () => {
         )}
       </nav>
 
+      <BlurFade delay={0.1} inView>
+
       {/* Hero Section */}
       <main className="pt-24 lg:pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8 flex h-[100vh] items-center justify-center">
         <div className="max-w-7xl mx-auto">
@@ -196,6 +199,7 @@ const LandingPage = () => {
           </div>
         </div>
       </main>
+      </BlurFade>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ChatInterface from "./pages/ChatInterface";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -10,32 +10,37 @@ import NProgressLoader from "./components/app/Progress";
 import { AuthProvider, useAuth } from "./lib/auth/authContext";
 import LandingPage from "./pages/Landing";
 import { BlurFade } from "./components/ui/blurFade";
-// npx shadcn@latest add "https://magicui.design/r/blur-fade"
 
 function App() {
   return (
     <Layout>
       <AuthProvider>
         <NProgressLoader />
-        <BlurFade delay={0.25} inView>
-          <AppRoutes />
-        </BlurFade>
+        <AnimatedRoutes />
       </AuthProvider>
     </Layout>
   );
 }
 
+function AnimatedRoutes() {
+  const location = useLocation()
+
+  return (
+    <BlurFade inView key={location.pathname}>
+      <AppRoutes />
+    </BlurFade>
+  );
+}
+
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
-  console.log("isauth : ", isAuthenticated);
 
   if (isLoading) {
-    return <LoadingProgress />; 
+    return <LoadingProgress />;
   }
 
   return (
     <Routes>
-      {/* Auth-related routes (should not be accessible when authenticated) */}
       {isAuthenticated ? (
         <Route path="*" element={<Navigate to="/chat" replace />} />
       ) : (
@@ -47,7 +52,6 @@ function AppRoutes() {
         </>
       )}
 
-      {/* Protected route (only accessible when authenticated) */}
       <Route
         path="/chat"
         element={
@@ -55,7 +59,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Catch-all route: redirect based on authentication status */}
       <Route
         path="*"
         element={<Navigate to={isAuthenticated ? "/chat" : "/"} />}
@@ -63,7 +66,7 @@ function AppRoutes() {
 
       <Route path="/" element={<LandingPage />} />
     </Routes>
-  )
+  );
 }
 
 export default App;

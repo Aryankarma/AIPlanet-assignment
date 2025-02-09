@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
+import { BlurFade } from "../ui/blurFade";
 
 export function ForgotPasswordForm({
   className,
@@ -39,16 +40,16 @@ export function ForgotPasswordForm({
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  Reset Password
-                </Button>
+                <BlurFade delay={0.1}>
+                  <Button type="submit" className="w-full">
+                    Reset Password
+                  </Button>
+                </BlurFade>
               </div>
               <div className="text-center text-sm">
                 Remember your password?{" "}
                 <Link to="/login">
-                  <span className="underline underline-offset-4">
-                    Sign in
-                  </span>
+                  <span className="underline underline-offset-4">Sign in</span>
                 </Link>
               </div>
             </div>
