@@ -46,7 +46,7 @@ export function NavUser({
     try {
       nProgress.start();
       await myAxios.post("http://localhost:8000/auth/logout")
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       throw error;
     } finally {

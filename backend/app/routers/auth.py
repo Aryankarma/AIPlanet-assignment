@@ -321,9 +321,15 @@ async def login(email: str = Form(...), password: str = Form(...)):
     db_user = await users_collection.find_one({"email": user.email})
     print(db_user)
 
-    if not db_user or not verify_password(user.password, db_user["password"]):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+    # check if the user exists in db (w email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail='User not found with this email')
 
+    # verify password
+    if not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=400, detail='Invalid credentials')
+
+    # check email verification
     if not db_user["verified"]:
         raise HTTPException(status_code=403, detail="Email not verified")
         

@@ -26,8 +26,12 @@ function App() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   console.log("isauth : ", isAuthenticated);
+
+  if (isLoading) {
+    return <LoadingProgress />; 
+  }
 
   return (
     <Routes>
@@ -36,8 +40,8 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/chat" replace />} />
       ) : (
         <>
-          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
         </>

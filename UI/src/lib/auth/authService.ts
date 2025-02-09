@@ -11,9 +11,7 @@ interface AuthStatus {
 
 export const checkAuthStatus = async (): Promise<AuthStatus> => {
   try {
-    const response = await myAxios.get('/auth/status', { 
-      withCredentials: true 
-    })
+    const response = await myAxios.get('http://localhost:8000/auth/status')
     return response.data as AuthStatus;
   } catch (error) {
     return { authenticated: false }

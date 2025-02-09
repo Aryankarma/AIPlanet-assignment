@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean | null;
   user: User | null;
   checkAuth: () => Promise<void>;
+  isLoading: boolean
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,11 +27,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
+    setIsLoading(true);
     const status = await checkAuthStatus();
     setIsAuthenticated(status.authenticated);
     setUser(status.user || null);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, checkAuth }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, checkAuth, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

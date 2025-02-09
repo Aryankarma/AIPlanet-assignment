@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import myAxios from "@/lib/axios";
 import nProgress from "nprogress";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export function RegisterForm({
   className,
@@ -28,6 +29,8 @@ export function RegisterForm({
     password: z.string().min(8).max(50),
     name: z.string().min(3).max(50),
   });
+
+  const navigate = useNavigate();
 
   // formschema for confirm password
   // const formSchema = z.object({
@@ -53,36 +56,43 @@ export function RegisterForm({
   const registerUser = async (values: z.infer<typeof formSchema>) => {
     try {
       nProgress.start();
-      const response: any = await myAxios.post(`http://localhost:8000/auth/register`, {
-        name: values.name,
-        password: values.password,
-        email: values.email,
-      });
-      
+      const response: any = await myAxios.post(
+        `http://localhost:8000/auth/register`,
+        {
+          name: values.name,
+          password: values.password,
+          email: values.email,
+        }
+      );
+
       toast("Success", {
         description: "User successfully registered",
       });
 
       listUsers();
 
-      if(response.data.success){
+      if (response.data.success) {
         setTimeout(() => {
           toast("Verification Link Sent", {
             description: response.data.message,
           });
         }, 1500);
-      }else{
+
+        setTimeout(() => {
+          navigate("/");
+        }, 6000);
+        
+      } else {
         setTimeout(() => {
           toast("Failed", {
             description: response.data.message,
           });
         }, 1500);
       }
-      
-      return response.data;
 
+      return response.data;
     } catch (error: any) {
-      toast("Error ", {description: error.response.data.detail});
+      toast("Error ", { description: error.response.data.detail });
     } finally {
       nProgress.done();
     }

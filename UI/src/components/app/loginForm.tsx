@@ -19,6 +19,7 @@ import axios from "axios";
 import nProgress from "nprogress";
 import myAxios from "@/lib/axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function LoginForm({
   className,
@@ -48,7 +49,7 @@ export function LoginForm({
       formData.append("email", values.email)
       formData.append("password", values.password)
 
-      const response = await myAxios.post(
+      const response: any = await myAxios.post(
         `http://localhost:8000/auth/login`,
         formData, {
           headers: {
@@ -59,14 +60,28 @@ export function LoginForm({
 
       // alert("login successfull")
       // alert(JSON.stringify(response.data))
+
+      toast("Success", {
+        description: JSON.stringify(response.data.message)
+      });
+
+      
+      setTimeout(()=>{
+        window.location.href = "/chat";
+      }, 1000)
       return response.data
     } catch (error: any) {
+      toast("Failed", {
+        description: JSON.stringify(error.response?.data.detail),
+      });      // window.location.reload();
+
       throw error.response?.data || { detail: "Unexpected error occurred" };
     } finally {
       nProgress.done();
       // navigate("/chat");
       // window.location.href = "/chat";
-      window.location.reload();
+      // only reload if successfully login
+      // window.location.reload();
     }
   };
 

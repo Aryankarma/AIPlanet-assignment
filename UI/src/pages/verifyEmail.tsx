@@ -83,7 +83,7 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-primary-foreground">
       <motion.div
         className="p-8 rounded-lg shadow-md  border border-secondary"
         initial="hidden"
