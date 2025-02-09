@@ -8,13 +8,18 @@ import LoadingProgress from "./components/app/LoadingProgress";
 import VerifyEmail from "./pages/verifyEmail";
 import NProgressLoader from "./components/app/Progress";
 import { AuthProvider, useAuth } from "./lib/auth/authContext";
+import LandingPage from "./pages/Landing";
+// import { BlurFade } from "@/registry/magicui/blur-fade";
+// npx shadcn@latest add "https://magicui.design/r/blur-fade"
 
 function App() {
   return (
     <Layout>
       <AuthProvider>
         <NProgressLoader />
-        <AppRoutes />
+        {/* <BlurFade delay={0.25} inView> */}
+          <AppRoutes />
+        {/* </BlurFade> */}
       </AuthProvider>
     </Layout>
   );
@@ -38,22 +43,23 @@ function AppRoutes() {
         </>
       )}
 
-    {/* Protected route (only accessible when authenticated) */}
+      {/* Protected route (only accessible when authenticated) */}
       <Route
         path="/chat"
         element={
-          isAuthenticated ? <ChatInterface /> : <Navigate to="/login" replace />
+          isAuthenticated ? <ChatInterface /> : <Navigate to="/" replace />
         }
       />
 
       {/* Catch-all route: redirect based on authentication status */}
       <Route
         path="*"
-        element={<Navigate to={isAuthenticated ? "/chat" : "/login"} />}
+        element={<Navigate to={isAuthenticated ? "/chat" : "/"} />}
       />
-    </Routes>
-  );
-}
 
+      <Route path="/" element={<LandingPage />} />
+    </Routes>
+  )
+}
 
 export default App;
