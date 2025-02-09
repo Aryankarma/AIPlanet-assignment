@@ -9,7 +9,7 @@ import VerifyEmail from "./pages/verifyEmail";
 import NProgressLoader from "./components/app/Progress";
 import { AuthProvider, useAuth } from "./lib/auth/authContext";
 import LandingPage from "./pages/Landing";
-// import { BlurFade } from "@/registry/magicui/blur-fade";
+import { BlurFade } from "./components/ui/blurFade";
 // npx shadcn@latest add "https://magicui.design/r/blur-fade"
 
 function App() {
@@ -17,9 +17,9 @@ function App() {
     <Layout>
       <AuthProvider>
         <NProgressLoader />
-        {/* <BlurFade delay={0.25} inView> */}
+        <BlurFade delay={0.25} inView>
           <AppRoutes />
-        {/* </BlurFade> */}
+        </BlurFade>
       </AuthProvider>
     </Layout>
   );
