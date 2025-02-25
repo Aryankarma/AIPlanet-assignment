@@ -40,6 +40,9 @@ const ChatInterface = () => {
   const [email, setemail] = useState("");
   const [token, setToken] = useState<string>("");
   const [message, setMessage] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const theme = useTheme().theme
 
   interface LoginResponse {
     access_token: string;
@@ -177,6 +180,10 @@ const ChatInterface = () => {
     }
   };
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="flex flex-col min-h-screen w-screen">
       <SidebarProvider
@@ -256,7 +263,7 @@ const ChatInterface = () => {
                   onClick={handleUploadClick}
                 >
                   <Upload className={`h-4 w-4`} />
-                  Upload PDF
+                  Upload Doc
                 </Button>
                 <ModeToggle />
               </div>
@@ -283,7 +290,7 @@ const ChatInterface = () => {
                       </div>
                       <div
                         className={`prose w-full max-w-none flex flex-col gap-3 leading-loose ${
-                          useTheme().theme === "dark"
+                          theme === "dark"
                             ? "prose-invert text-gray-300"
                             : null
                         }`}
@@ -293,6 +300,7 @@ const ChatInterface = () => {
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             </main>
 
