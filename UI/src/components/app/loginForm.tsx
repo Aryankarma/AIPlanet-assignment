@@ -21,6 +21,7 @@ import myAxios from "@/lib/axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { BlurFade } from "../ui/blurFade";
+import { json } from "stream/consumers";
 
 export function LoginForm({
   className,
@@ -64,7 +65,7 @@ export function LoginForm({
       // alert(JSON.stringify(response.data))
 
       toast("Success", {
-        description: JSON.stringify(response.data.message),
+        description: response.data.message,
       });
 
       setTimeout(() => {
@@ -72,10 +73,18 @@ export function LoginForm({
       }, 1000);
       return response.data;
     } catch (error: any) {
-      toast("Failed", {
-        description: JSON.stringify(error.response?.data.detail),
-      }); // window.location.reload();
-
+      const status = error.response?.status;
+      status == 404
+        ? toast("Failed", {
+            description: error.response?.data.detail,
+            action: {
+              label: "Create account",
+              onClick: () => navigate("/register"),
+            },
+          })
+        : toast("Failed", {
+            description: error.response?.data.detail,
+          });
       throw error.response?.data || { detail: "Unexpected error occurred" };
     } finally {
       nProgress.done();
@@ -128,7 +137,7 @@ export function LoginForm({
                     <Input
                       id="email"
                       type="email"
-                      placeholder="a@example.com"
+                      placeholder="mock - a@gmail.com"
                       autoFocus
                       required
                       {...form.register("email")}
@@ -155,7 +164,7 @@ export function LoginForm({
                         <PasswordInput
                           value={field.value}
                           onChange={field.onChange}
-                          placeholder="••••••••••"
+                          placeholder="mock - 12345678"
                         />
                       )}
                     />

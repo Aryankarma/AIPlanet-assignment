@@ -11,7 +11,7 @@ const Loader1 = ({ size = "25" }: { size?: string }) => {
   }, []);
 
   return (
-    <div className="flex justify-center items-center w-100 h-[500px]">
+    <div key={Date.now()} className="flex justify-center items-center w-100 h-[500px]">
       <l-ring-2
         size={size}
         stroke="1.5"

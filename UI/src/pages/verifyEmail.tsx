@@ -44,19 +44,26 @@ export default function VerifyEmail() {
       toast("Success", {
         description: response.data.message,
       });
-            
+      
+      console.log("successfull verify email")
+      alert("Email verified successfully, sending u to /chat");
+      setTimeout(() => {
+        navigate("/chat");
+      }, 5000);
     } catch (error: any) {
       // Generic error handling
+      console.log("error maybe")
       setVerificationStatus("error");
+      alert("error, sending u to /");
       setMessage(error.response?.data?.detail || "Failed to verify email");
       toast("Error", {
         description: error.response?.data?.detail || "Failed to verify email",
       });
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
     } finally {
       nProgress.done();
-      setTimeout(()=>{
-        window.location.reload()
-      }, 2000)
     }
   };
 

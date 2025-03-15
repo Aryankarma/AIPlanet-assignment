@@ -6,6 +6,7 @@ class User(BaseModel):
     email: str
     password: str
     verified: bool = False
+    primary_assistant: str = "default"
     created_at: datetime = datetime.now()
 
 class Token(BaseModel):

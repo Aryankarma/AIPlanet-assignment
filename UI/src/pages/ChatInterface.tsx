@@ -40,7 +40,7 @@ const ChatInterface = () => {
   const [email, setemail] = useState("");
   const [token, setToken] = useState<string>("");
   const [message, setMessage] = useState("");
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const theme = useTheme().theme
 
@@ -62,7 +62,7 @@ const ChatInterface = () => {
       listUsers();
       return response.data;
     } catch (error: any) {
-      alert(JSON.stringify(error.response.data.detail));
+      alert(error.response.data.detail);
     }
   };
 
@@ -158,10 +158,13 @@ const ChatInterface = () => {
       return;
     }
 
+    const assistantName = localStorage.getItem("primaryAssistant")
+
     try {
       console.log("save pdf function start");
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("assistantName", assistantName || "");
 
       const response = await myAxios.post(
         "http://localhost:8000/savePdf",
@@ -181,7 +184,7 @@ const ChatInterface = () => {
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef?.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
@@ -289,7 +292,7 @@ const ChatInterface = () => {
                         {message.sender === "user" ? "You" : "AI Assistant"}
                       </div>
                       <div
-                        className={`prose w-full max-w-none flex flex-col gap-3 leading-loose ${
+                        className={`prose list-decimal w-full max-w-none flex flex-col gap-3 leading-loose ${
                           theme === "dark"
                             ? "prose-invert text-gray-300"
                             : null

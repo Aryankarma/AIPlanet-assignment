@@ -32,9 +32,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTheme } from "../ThemeProvider";
-import { Search } from 'lucide-react';
+import { Search } from "lucide-react";
 import nProgress from "nprogress";
 import myAxios from "@/lib/axios";
+import { toast } from "sonner";
+import { c } from "framer-motion/dist/types.d-6pKw1mTI";
 
 const data = {
   user: {
@@ -210,11 +212,11 @@ interface FileModel {
 }
 
 interface FileObject {
-  file_model: FileModel;
   name: string;
   created_on: string;
   updated_on: string;
   metadata: any;
+  id: string;
   status: string;
   mime_type: string | null;
 }
@@ -248,324 +250,288 @@ interface Document {
   updated_on: string;
 }
 
-export const AppSidebar = memo(({
-  setIsSidebarOpen,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & {
-  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) => { 
-  const [docs, setDocs] = useState<Object>({});
-  const [assistants, setAssistants] = useState<Object>({});
-  const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
-  const [docsLoading, setDocsLoading] = useState<boolean>(true);
-  const [deletingDocID, setDeletingDocID] = useState<string | null>(null);
-  const [deletedDocs, setDeletedDocs] = useState<string[]>([""]);
-  const [deletedAssistants, setDeletedAssistants] = useState<string[]>([""]);
-  const [sidebarError, setSidebarError] = useState<string | null>(null);
-  const [deletingAssistantID, setDeletingAssistantID] = useState<string | null>(
-    null
-  );
-  const [primaryAssistant, setPrimaryAssistant] = useState<string>( 
-    () => JSON.parse(localStorage.getItem("primaryAssistant") ?? JSON.stringify("aiplanetassistant"))
-  );
-
-  const [activeItem, setActiveItem] = useState<string>(
-    () => JSON.parse(localStorage.getItem("activeItem") ?? JSON.stringify("Docs"))
-  );
-
-  useEffect(() => {
-    localStorage.setItem("primaryAssistant", JSON.stringify(primaryAssistant)); // Save to localStorage
-  }, [primaryAssistant]);
-
-  useEffect(()=>{
-    localStorage.setItem("activeItem", JSON.stringify(activeItem));
-  },[activeItem])
-
-  useEffect(()=>{
-    fetchDocs();
-  },[primaryAssistant])
-
-  useEffect(() => {
-    fetchDocs();
-    fetchAssistants();
-  }, []);
-
-  const ASSISTANT_NAME = "aiplanetassistant";
-  // const ASSISTANT_NAME = "assistant3";
-  const { setOpen } = useSidebar();
-
-  const fetchDocs = async () => {
-    setDocsLoading(true);
-    nProgress.start()
-    setSidebarError(null);
-
-    const formData = new FormData();
-    formData.append("assistantName", primaryAssistant);
-
-    try {
-    const response: { data: DocsResponseData } = await myAxios.post(
-        "http://localhost:8000/fetchDocs",
-        formData,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      console.log("documents ", response);
-      if (response?.data?.files) {
-        setDocs(response.data.files);
-      }
-    } catch (err) {
-      setSidebarError("Failed to fetch documents");
-      console.error(err);
-    } finally {
-      nProgress.done()
-      setDocsLoading(false);
-    }
-  };
-
-  // send username in params when auth gets setup
-  const fetchAssistants = async () => {
-    setSidebarLoading(true);
-    setSidebarError(null);
-
-    const formData = new FormData();
-    formData.append("userName", "aryan");
-
-    try {
-      nProgress.start()
-      const response: { data: AssistantResponseData } = await myAxios.post(
-        "http://localhost:8000/getAssistants",
-        formData,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      console.log("assistants available : ", response);
-      if (response?.data?.assistants) {
-        setAssistants(response.data.assistants);
-      }
-    } catch (err) {
-      setSidebarError("Failed to fetch documents");
-      console.error(err);
-    } finally {
-      nProgress.done()
-      setSidebarLoading(false);
-    }
-  };
-
-  const deleteDocument = async (DataStore: string) => {
-    console.log("DataStore from fronyend: ", DataStore);
-
-    // extracting id from dataStore string
-    const validJsonString = DataStore.replace(/'/g, '"').replace(
-      / None/g,
-      "null"
+export const AppSidebar = memo(
+  ({
+    setIsSidebarOpen,
+    ...props
+  }: React.ComponentProps<typeof Sidebar> & {
+    setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  }) => {
+    const isFirstRender = useRef(true);
+    const [docs, setDocs] = useState<Object>({});
+    const [assistants, setAssistants] = useState<Object>({});
+    const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
+    const [docsLoading, setDocsLoading] = useState<boolean>(true);
+    const [deletingDocID, setDeletingDocID] = useState<string | null>(null);
+    const [deletedDocs, setDeletedDocs] = useState<string[]>([""]);
+    const [deletedAssistants, setDeletedAssistants] = useState<string[]>([""]);
+    const [sidebarError, setSidebarError] = useState<string | null>(null);
+    const [deletingAssistantID, setDeletingAssistantID] = useState<
+      string | null
+    >(null);
+    const [primaryAssistant, setPrimaryAssistant] = useState<string>(
+      () => localStorage.getItem("primaryAssistant") || "default"
     );
 
-    const parsedObject = JSON.parse(validJsonString);
-    const id = parsedObject.id;
-    console.log(id);
+    const [activeItem, setActiveItem] = useState<string>(
+      () => localStorage.getItem("activeItem") || "Docs" // Fallback to "Docs" if null
+    );
 
-    try {
-      nProgress.start()
-      setDeletingDocID(DataStore);
-      const formData = new FormData();
-      formData.append("docID", id);
-      formData.append("assistantName", primaryAssistant);
-
-      const response = await myAxios.post(
-        "http://localhost:8000/deleteDoc",
-        formData,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
-      if (response.status === 200) {
-        // add a successfully deleted doc toast here
-        // fetchDocs();
-        setDeletedDocs((prev) => [...prev, DataStore]);
-        setDeletingDocID(null);
+    useEffect(() => {
+      if (isFirstRender.current) {
+        // First render, skip API call
+        isFirstRender.current = false;
+        return;
       }
-    } catch (error) {
-      console.error("error : ", error);
-    } finally {
-      nProgress.done()
-    }
-  };
 
-  // check this out, and rewrite (this one is not perfect)
-  const deleteAssistant = async (assistantName: string) => {
-    console.log("DataStore from fronyend: ", assistantName);
+      // Actual update logic only when primaryAssistant changes after first mount
+      localStorage.setItem("primaryAssistant", primaryAssistant);
+      updatePrimaryAssistant(primaryAssistant);
+      fetchDocs();
+    }, [primaryAssistant]);
 
-    try {
-      nProgress.start()
-      setDeletingAssistantID(assistantName);
+    useEffect(() => {
+      console.log("primaryAssistant: ", primaryAssistant);
+    }, [primaryAssistant]);
+
+    useEffect(() => {
+      localStorage.setItem("activeItem", activeItem); // Save as plain string
+    }, [activeItem]);
+
+    useEffect(() => {
+      fetchDocs();
+    }, [primaryAssistant]);
+
+    useEffect(() => {
+      fetchDocs();
+      fetchAssistants();
+    }, []);
+
+    const { setOpen } = useSidebar();
+
+    const updatePrimaryAssistant = async (assistantName: string) => {
+      nProgress.start();
+
       const formData = new FormData();
       formData.append("assistantName", assistantName);
 
-      const response = await myAxios.post(
-        "http://localhost:8000/deleteAssistant",
-        formData,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
+      try {
+        const response: any = await myAxios.post(
+          "http://localhost:8000/updatePrimaryAssistant",
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        console.log("Primary assistant update response:", response);
+
+        if (response?.data?.success) {
+          setPrimaryAssistant(assistantName);
+          localStorage.setItem("primaryAssistant", assistantName);
+          toast(`Primary Assistant updated to: ${assistantName}`);
         }
+
+        return response.data;
+      } catch (err) {
+        console.error(err);
+        return null;
+      } finally {
+        nProgress.done();
+      }
+    };
+
+    const fetchDocs = async () => {
+      setDocsLoading(true);
+      nProgress.start();
+      setSidebarError(null);
+
+      const formData = new FormData();
+      formData.append("assistantName", primaryAssistant);
+
+      try {
+        const response: { data: DocsResponseData } = await myAxios.post(
+          "http://localhost:8000/fetchDocs",
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        console.log("documents ", response);
+        if (response?.data?.files) {
+          setDocs(response.data.files);
+        }
+      } catch (err) {
+        setSidebarError("Failed to fetch documents");
+        console.error(err);
+      } finally {
+        nProgress.done();
+        setDocsLoading(false);
+      }
+    };
+
+    // send username in params when auth gets setup
+    const fetchAssistants = async () => {
+      setSidebarLoading(true);
+      setSidebarError(null);
+
+      const formData = new FormData();
+      formData.append("dummy", "dummy"); // you can remove this if backend expects nothing
+
+      try {
+        nProgress.start();
+        const response: { data: AssistantResponseData } = await myAxios.post(
+          "http://localhost:8000/getAssistants",
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        console.log("assistants available : ", response);
+        if (response?.data?.assistants) {
+          setAssistants(response.data.assistants);
+        }
+      } catch (err) {
+        setSidebarError("Failed to fetch documents");
+        console.error(err);
+      } finally {
+        nProgress.done();
+        setSidebarLoading(false);
+      }
+    };
+
+    const deleteDocument = async (id: string) => {
+      console.log("DataStore from fronyend: ", id);
+
+      try {
+        if (!id) {
+          console.error("No id provided!");
+          return;
+        }
+
+        // console.log("id from frontend:", id);
+
+        // // Safely convert to valid JSON string
+        // const validJsonString = id
+        //   .replace(/'/g, '"')
+        //   .replace(/\bNone\b/g, 'null');
+
+        // const parsedObject: { id: string } = JSON.parse(validJsonString);
+
+        console.log("Extracted ID:", id);
+
+        nProgress.start();
+        setDeletingDocID(id);
+        const formData = new FormData();
+        formData.append("docID", id);
+        formData.append("assistantName", primaryAssistant);
+
+        const response = await myAxios.post(
+          "http://localhost:8000/deleteDoc",
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        if (response.status === 200) {
+          // add a successfully deleted doc toast here
+          toast("Document deleted successfully.");
+          // fetchDocs();
+          setDeletedDocs((prev) => [...prev, id]);
+          setDeletingDocID(null);
+        }
+      } catch (error) {
+        console.error("error : ", error);
+      } finally {
+        nProgress.done();
+      }
+    };
+
+    // check this out, and rewrite (this one is not perfect)
+    const deleteAssistant = async (assistantName: string) => {
+      console.log("DataStore from fronyend: ", assistantName);
+
+      try {
+        nProgress.start();
+        setDeletingAssistantID(assistantName);
+        const formData = new FormData();
+        formData.append("assistantName", assistantName);
+
+        const response = await myAxios.post(
+          "http://localhost:8000/deleteAssistant",
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        if (response.status === 200) {
+          // add a successfully deleted assistant toast here
+          toast("Assistant deleted successfully.");
+          // fetchDocs();
+          setDeletedAssistants((prev) => [...prev, assistantName]);
+          setDeletingAssistantID(null);
+          updatePrimaryAssistant("default");
+        }
+      } catch (error) {
+        console.error("error : ", error);
+      } finally {
+        nProgress.done();
+      }
+    };
+
+    const renderDocs = () => {
+      if (docsLoading) {
+        return <Loader1 />;
+      }
+
+      if (sidebarError) {
+        return (
+          <div
+            key={Date.now()}
+            className="text-red-500 py-10 mx-auto text-center"
+          >
+            {sidebarError}
+          </div>
+        );
+      }
+
+      const filteredDocs = (docs as FileObject[]).filter(
+        (doc) => !deletedDocs.includes(doc?.id)
       );
 
-      if (response.status === 200) {
-        // add a successfully deleted doc toast here
-        // fetchDocs();
-        setDeletedAssistants((prev) => [...prev, assistantName]);
-        setDeletingAssistantID(null);
-      }
-    } catch (error) {
-      console.error("error : ", error);
-    } finally {
-      nProgress.done()
-    }
-  };
-
-  const renderDocs = () => {
-    if (docsLoading) {
-      return <Loader1 />;
-    }
-    
-    if (sidebarError) {
-      return <div className="text-red-500 py-10 mx-auto text-center">{sidebarError}</div>;
-    }
-
-    const filteredDocs = (docs as FileObject[]).filter(
-      (doc) => !deletedDocs.includes(doc?.file_model?._data_store)
-    );
-
-    if(filteredDocs.length === 0){
-      return <div className="flex justify-center items-center w-100 h-[100px] ">
-        <p className="mx-auto">No Docs Uploaded.</p>
-      </div> 
-    }
-    
-    return filteredDocs.map((doc) => (
-      <div
-        key={doc.created_on}
-        className="flex-row flex justify-between animate-opacityOpen ease-in-out items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 "
-      >
-        <div className="flex flex-col text-left">
-          <span
-            key={doc.created_on}
-            className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
+      if (filteredDocs.length === 0) {
+        return (
+          <div
+            key={Date.now()}
+            className="flex justify-center items-center w-100 h-[100px] "
           >
-            {doc.name}
-          </span>
+            <p className="mx-auto">No Docs Uploaded.</p>
+          </div>
+        );
+      }
 
-          <span className="text-xs font-light">
-            {new Date(doc.created_on).toLocaleString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "numeric",
-              hour12: true,
-            })}
-          </span>
-        </div>
-
-        <Button
-          onClick={() => deleteDocument(doc?.file_model?._data_store)}
-          className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
-          variant="outline"
+      return filteredDocs.map((doc) => (
+        <div
+          key={doc.created_on}
+          className="flex-row flex justify-between animate-opacityOpen ease-in-out items-center gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 "
         >
-          {deletingDocID === doc?.file_model?._data_store ? (
-            <Loader1 size="17" />
-          ) : (
-            <Trash className="w-1.5 h-1.5" />
-          )}
-        </Button>
-      </div>
-    ));
-  };
-
-  const renderAssistants = () => {
-    if (sidebarLoading) {
-      return <Loader1 />;
-    }
-
-    if (sidebarError) {
-      return <div className="text-red-500 py-10 mx-auto text-center">{sidebarError}</div>;
-    }
-
-    const filteredAssistantData = (assistants as AssistantObject[]).filter(
-      (assistant) => !deletedAssistants.includes(assistant?.name)
-    );
-
-    return filteredAssistantData.map((assistant) => (
-      <div
-      // ${assistant.name == primaryAssistant ? (useTheme().theme == 'dark' ? "bg-neutral-950" : "bg-slate-50") : ""} 
-        className={`
-          transition-all animate-opacityOpen hover:bg-opacity-80 flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
-      >
-        <TooltipProvider>
-          <Tooltip>
-            <div className="flex flex-col text-left">
-              <TooltipTrigger className="p-0 bg-transparent mr-auto border-none focus:outline-none hover:opacity-75">
-                <span
-                  onClick={() => setPrimaryAssistant(assistant.name)}
-                  className={`text-wrap ${
-                    assistant.name == primaryAssistant ? "text-blue-500" : ""
-                  }`}
-                >
-                  {assistant.name}
-                </span>
-                <TooltipContent>
-                  <p>Set Primary</p>
-                </TooltipContent>
-              </TooltipTrigger>
-              <span className="text-xs font-light">
-                {new Date(assistant.created_at).toLocaleString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "numeric",
-                  hour12: true,
-                })}
-              </span>
-            </div>
-          </Tooltip>
-        </TooltipProvider>
-        <Button
-          onClick={() => deleteAssistant(assistant?.name)}
-          className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
-          variant="outline"
-        >
-          {deletingAssistantID === assistant?.name ? (
-            <Loader1 size="17" />
-          ) : (
-            <Trash className="w-1.5 h-1.5" />
-          )}
-        </Button>
-      </div>
-    ));
-  };
-
-  const renderChats = () => {
-    return [...Array(4)]
-      .flatMap(() => data.chats)
-      .map((chat) => (
-        <div className="flex-row flex animate-opacityOpen justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center">
           <div className="flex flex-col text-left">
-            <a
-              key={chat.id}
-              className="cursor-pointer flex text-primary hover:opacity-75 flex-col pr-4"
+            <span
+              key={doc.created_on}
+              className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
             >
-              {chat.chatName}
-            </a>
+              {doc.name}
+            </span>
+
             <span className="text-xs font-light">
-              {" "}
-              {new Date(chat.createdOn).toLocaleString("en-US", {
+              {new Date(doc.created_on).toLocaleString("en-US", {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
@@ -575,54 +541,168 @@ export const AppSidebar = memo(({
               })}
             </span>
           </div>
+
           <Button
-            className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent" 
+            onClick={() => deleteDocument(doc?.id)}
+            className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent"
             variant="outline"
           >
-            <Trash className="w-1.5 h-1.5" />
+            {deletingDocID === doc?.id ? (
+              <Loader1 size="17" />
+            ) : (
+              <Trash className="w-1.5 h-1.5" />
+            )}
           </Button>
         </div>
       ));
-  };
+    };
 
-  const renderContent = () => {
-    switch (activeItem) {
-      case "Docs":
-        return renderDocs();
-      case "Assistants":
-        return renderAssistants();
-      default:
-        return renderChats();
-    }
-  };
+    const renderAssistants = () => {
+      if (sidebarLoading) {
+        return <Loader1 />;
+      }
 
-  return (
-    <Sidebar
-      collapsible="icon"
-      className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row select-none z-50"
-      setIsSidebarOpen={setIsSidebarOpen}
-      {...props}
-    >
-      {/* This is the first sidebar */}
-      {/* We disable collapsible and adjust width to icon. */}
-      {/* This will make the sidebar appear as icons. */}
-      <Sidebar
-        collapsible="none"
-        className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-secondary z-50"
-      >
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                asChild
-                className="md:h-8 md:p-0"
-                tooltip={{
-                  children: "Toggle sidebar",
-                  hidden: false,
-                }}
+      if (sidebarError) {
+        return (
+          <div
+            key={Date.now()}
+            className="text-red-500 py-10 mx-auto text-center"
+          >
+            {sidebarError}
+          </div>
+        );
+      }
+
+      const filteredAssistantData = (assistants as AssistantObject[]).filter(
+        (assistant) => !deletedAssistants.includes(assistant?.name)
+      );
+
+      return filteredAssistantData.map((assistant, id) => (
+        <div
+          key={id}
+          // ${assistant.name == primaryAssistant ? (useTheme().theme == 'dark' ? "bg-neutral-950" : "bg-slate-50") : ""}
+          className={`
+          transition-all animate-opacityOpen hover:bg-opacity-80 flex-row flex justify-between gap-2 whitespace-nowrap border-secondary border-b p-4 text-sm first:-mt-4 items-center`}
+        >
+          <TooltipProvider delayDuration={750}>
+            <Tooltip>
+              <div className="flex flex-col text-left">
+                <TooltipTrigger className="p-0 bg-transparent mr-auto border-none focus:outline-none hover:opacity-75">
+                  <span
+                    onClick={() => setPrimaryAssistant(assistant.name)}
+                    className={`text-wrap ${
+                      assistant.name == primaryAssistant ? "text-blue-500" : ""
+                    }`}
+                  >
+                    {assistant.name}
+                  </span>
+                  <TooltipContent>
+                    <p>Set Primary</p>
+                  </TooltipContent>
+                </TooltipTrigger>
+                <span className="text-xs font-light">
+                  {new Date(assistant.created_at).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "numeric",
+                    hour12: true,
+                  })}
+                </span>
+              </div>
+            </Tooltip>
+          </TooltipProvider>
+          <Button
+            onClick={() => deleteAssistant(assistant?.name)}
+            className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent"
+            variant="outline"
+          >
+            {deletingAssistantID === assistant?.name ? (
+              <Loader1 size="17" />
+            ) : (
+              <Trash className="w-1.5 h-1.5" />
+            )}
+          </Button>
+        </div>
+      ));
+    };
+
+    const renderChats = () => {
+      return [...Array(4)]
+        .flatMap(() => data.chats)
+        .map((chat, id) => (
+          <div
+            key={id}
+            className="flex-row flex animate-opacityOpen justify-between gap-2 border-secondary border-b p-4 text-sm first:-mt-4 items-center"
+          >
+            <div className="flex flex-col text-left">
+              <a
+                key={chat.id}
+                className="cursor-pointer flex text-primary hover:opacity-75 flex-col pr-4"
               >
-                {/* <a href="#" className="text-primary bg-secondary hover:text-secondary hover:bg-primary">
+                {chat.chatName}
+              </a>
+              <span className="text-xs font-light">
+                {" "}
+                {new Date(chat.createdOn).toLocaleString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "numeric",
+                  hour12: true,
+                })}
+              </span>
+            </div>
+            <Button
+              className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent"
+              variant="outline"
+            >
+              <Trash className="w-1.5 h-1.5" />
+            </Button>
+          </div>
+        ));
+    };
+
+    const renderContent = () => {
+      switch (activeItem) {
+        case "Docs":
+          return renderDocs();
+        case "Assistants":
+          return renderAssistants();
+        default:
+          return renderChats();
+      }
+    };
+
+    return (
+      <Sidebar
+        collapsible="icon"
+        className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row select-none z-50"
+        setIsSidebarOpen={setIsSidebarOpen}
+        {...props}
+      >
+        {/* This is the first sidebar */}
+        {/* We disable collapsible and adjust width to icon. */}
+        {/* This will make the sidebar appear as icons. */}
+        <Sidebar
+          collapsible="none"
+          className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-secondary z-50"
+        >
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  size="lg"
+                  asChild
+                  className="md:h-8 md:p-0"
+                  tooltip={{
+                    children: "Toggle sidebar",
+                    hidden: false,
+                  }}
+                >
+                  {/* <a href="#" className="text-primary bg-secondary hover:text-secondary hover:bg-primary">
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                     <Command className="size-4" />
                   </div>
@@ -631,76 +711,74 @@ export const AppSidebar = memo(({
                     <span className="truncate text-xs">Enterprise</span>
                   </div>
                 </a> */}
-                <SidebarTrigger
-                  className="text-primary bg-transparent"
-                  onClick={() => setIsSidebarOpen((prev) => !prev)}
-                />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent className="px-1.5 md:px-0">
-              <SidebarMenu>
-                {data.navMain.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: item.title,
-                        hidden: false,
-                      }}
-                      onClick={() => {
-                        setActiveItem(item.title);
-                        setIsSidebarOpen(true);
-                        setOpen(true);
-                      }}
-                      isActive={activeItem === item.title}
-                      className="px-2.5 md:px-2 data-[active=true]:bg-sidebar-accent data-[active=true]:text-primary border-none outline-none text-primary sidebar-background hover:border-none hover:text-primary bg-transparent"
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarTrigger
-            className="text-primary bg-transparent invisible"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-          />
-          <NavUser user={data.user} />
-        </SidebarFooter>
-      </Sidebar>
+                  <SidebarTrigger
+                    className="text-primary bg-transparent"
+                    onClick={() => setIsSidebarOpen((prev) => !prev)}
+                  />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupContent className="px-1.5 md:px-0">
+                <SidebarMenu>
+                  {data.navMain.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        tooltip={{
+                          children: item.title,
+                          hidden: false,
+                        }}
+                        onClick={() => {
+                          setActiveItem(item.title);
+                          setIsSidebarOpen(true);
+                          setOpen(true);
+                        }}
+                        isActive={activeItem === item.title}
+                        className="px-2.5 md:px-2 data-[active=true]:bg-sidebar-accent data-[active=true]:text-primary border-none outline-none text-primary sidebar-background hover:border-none hover:text-primary bg-transparent"
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarTrigger
+              className="text-primary bg-transparent invisible"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+            />
+            <NavUser user={data.user} />
+          </SidebarFooter>
+        </Sidebar>
 
-      {/* This is the second sidebar */}
-      {/* We disable collapsible and let it fill remaining space */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex z-50">
-        <SidebarHeader className="gap-3.5 border-b p-4 py-[18px] ">
-          <div className="flex w-full items-center justify-between">
-            <div className="text-base font-medium text-foreground">
-              {activeItem}
+        {/* This is the second sidebar */}
+        {/* We disable collapsible and let it fill remaining space */}
+        <Sidebar collapsible="none" className="hidden flex-1 md:flex z-50">
+          <SidebarHeader className="gap-3.5 border-b p-4 py-[18px] ">
+            <div className="flex w-full items-center justify-between">
+              <div className="text-base font-medium text-foreground">
+                {activeItem}
+              </div>
+              {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
+              <SidebarInput className="w-2/3" placeholder="Search Anything" />
             </div>
-            {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
-            <SidebarInput className="w-2/3" placeholder="Search Anything" /> 
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className="px-0">
-            <SidebarGroupContent>
-              <ScrollArea
-                key={Date.now()}
-                className="h-full overflow-y-auto scroll-smooth scrollbar-thin scrollbar-thumb-rounded-xl scrollbar-thumb-secondary scrollbar-track-transparent"
-              >
-                {renderContent()}
-              </ScrollArea>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup className="px-0">
+              <SidebarGroupContent>
+                <ScrollArea className="h-full overflow-y-auto scroll-smooth scrollbar-thin scrollbar-thumb-rounded-xl scrollbar-thumb-secondary scrollbar-track-transparent">
+                  {renderContent()}
+                </ScrollArea>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
       </Sidebar>
-    </Sidebar>
-  );
-})
+    );
+  }
+);

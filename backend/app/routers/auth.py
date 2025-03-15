@@ -27,28 +27,6 @@ SMTP_EMAIL = "servicepostparcel@gmail.com"
 SMTP_PASSWORD = "aooo upev brdz walg"
 
 
-# @router.post("/register")
-# async def register(user: User, background_tasks: BackgroundTasks):
-#     # print recieved user details
-#     print(user)
-#     existing_user = await users_collection.find_one({"email": user.email})
-#     print("existinguser", existing_user)
-#     if existing_user != None:
-#         raise HTTPException(status_code=400, detail="Username already exists")
-
-#     hashed_password = hash_password(user.password)
-#     await users_collection.insert_one({"name": user.name, "email": user.email, "password": hashed_password, "verified": False})
-#     # user is created in db
-
-#     # generating & sending verification url through token
-#     verification_token = create_access_token({"email": user.email}, timedelta(hours=1))
-#     verification_url = f"http://localhost:5173/verify-email?token={verification_token}"
-#     background_tasks.add_task(send_verification_email, user.email, verification_url)
-
-#     return {"message": "User created successfully, please verify your email"}
-
-
-
 @router.post("/logout")
 async def logout(request: Request):
     response = JSONResponse(content={"message": "Logged out successfully"})
@@ -82,22 +60,6 @@ async def authStatus(request: Request):
     }
    
    
-    # copilot code
-    # token = request.cookies.get("access_token")
-    # if not token:
-    #     raise HTTPException(status_code=401, detail="Access token is missing.", "authenticated": False)
-    
-    # try:
-    #     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    #     print("payload: ", payload)
-    #     return {"message": "User is authenticated", "authenticated": True}
-
-    # except jwt.ExpiredSignatureError:
-    #     raise HTTPException(status_code=401, detail="Token has expired", "authenticated": False)
-    # except jwt.JWTError:
-    #     raise HTTPException(status_code=401, detail="Invalid token", "authenticated": False)
-
-
 @router.post("/register")
 async def register(user: User, background_tasks: BackgroundTasks):
     # print recieved user details
@@ -131,116 +93,6 @@ async def register(user: User, background_tasks: BackgroundTasks):
 
 
 
-# @router.post("/verify-email")
-# async def verify_email(request: Request):
-#     data = await request.json()
-#     token = data.get("token")
-
-#     print("Received token on verify_email route: ", token)
-    
-#     # find user and verify   
-#     try:         
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) 
-#         print("recieved payload on verify_email_route: ", payload)
-#         email = payload.get("email")
-#         if email is None: 
-#             raise HTTPException(status_code = 400, detail = "Invalid token")
-
-#         # update the user as verified in the db
-#         user = await users_collection.find_one({"email": email})
-#         if not user:
-#             raise HTTPException(status_code = 404, detail =  "User not found")
-
-#         if user.get("verified"):
-#             return {"message" : "Email is already verified"}
-        
-#         await users_collection.update_one({"email": email}, {"$set": {"verified": True}})
-#         return {"message" : "Email verified successfully"}
-#     except jwt.ExpiredSignatureError:
-#         raise HTTPException(status_code = 400, detail = "Verification token expired.")
-#     except jwt.PyJWTError: 
-#         raise HTTPException(status_code = 400, detail = "Invalid token")
-        
-
-
-
-# new verify-email with cookies
-# @router.post("/verify-email")
-# async def verify_email(request: Request):
-#     data = await request.json()
-#     token = data.get("token")
-
-#     if not token: 
-#         raise HTTPException(status_code=400, detail="Token is required")
-    
-#     # find and validate token
-#     token_doc = await tokens_collection.find_one({"token": token, "used": False, "expires_at": {"$gt": datetime.now(timezone.utc)}}) 
-
-#     if not token_doc:
-#         raise HTTPException(status_code=400, detail="Already used or expired token")
-
-#     print("Received token on verify_email route: ", token)
-
-#     # find user and update the user as verified in the db
-#     user = await users_collection.find_one({"email": token_doc["email"]})
-#     if not user:
-#         raise HTTPException(status_code = 404, detail = "User not found with the associated token")
-
-#     if user.get("verified"):
-#         return {"message" : "Email is already verified"}
-    
-#     # Update user verification and mark token as used - transaction 
-#     async with await users_collection.database.client.start_session() as s:
-#         async with s.start_transaction():
-#             await users_collection.update_one(
-#                 {"email": token_doc["email"]}, 
-#                 {"$set": {
-#                     "verified": True, 
-#                     "verified_at": datetime.now(timezone.utc)
-#                 }}
-#             )
-#             await tokens_collection.update_one(
-#                 {"_id": token_doc["_id"]}, 
-#                 {"$set": {
-#                     "used": True, 
-#                     "used_at": datetime.now(timezone.utc)
-#                 }}
-#             )
-    
-#     # Generate access token
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(
-#         data={"sub": user["email"], "type": "access"}, 
-#         expires_delta=access_token_expires
-#     )
-    
-#     # Store session token
-#     await tokens_collection.insert_one({
-#         "token": access_token,
-#         "user_id": str(user["_id"]),
-#         "type": "session",
-#         "expires_at": datetime.now(timezone.utc) + access_token_expires,
-#         "created_at": datetime.now(timezone.utc)
-#     })
-
-#     # Prepare response with cookie
-#     response = JSONResponse(content={"message": "Email verified successfully, redirecting."})
-    
-#     # Set secure cookie
-#     response.set_cookie(
-#         key="access_token",
-#         value=access_token,
-#         httponly=True,
-#         secure=False,  # Always use True in production
-#         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-#         expires=datetime.now(timezone.utc) + access_token_expires,
-#         samesite="Lax"
-#     )
-    
-#     return response
-
-
-
 
 @router.post("/verify-email")
 async def verify_email(request: Request):
@@ -261,7 +113,7 @@ async def verify_email(request: Request):
     # find user and update the user as verified in the db
     user = await users_collection.find_one({"email": token_doc["email"]})
     if not user:
-        raise HTTPException(status_code = 404, detail =  "User not found with the associated token,")
+        raise HTTPException(status_code = 404, detail =  "User not found with the associated token")
 
     if user.get("verified"):
         return {"message" : "Email is already verified"}
@@ -411,21 +263,9 @@ Your Celestio Team"""
         print(f"Failed to send email: {e}")
         return {"message": "Failed to send verification mail, try again.", "email": to_email, "success": False}
  
-#  old create access token
 
-# def create_access_token(data: dict, expires_delta: timedelta):
-#     """Create a JWT access token"""
-#     to_encode = data.copy()
-#     expire = datetime.now(timezone.utc) + expires_delta
-#     to_encode.update({"exp": expire}) 
-#     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-#     print("Generated token:", encoded_jwt)
 
-#     decoded = jwt.decode(encoded_jwt, SECRET_KEY, algorithms=[ALGORITHM])
-#     print("Decoded payload:", decoded)
-
-#     return encoded_jwt
-
+ 
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta

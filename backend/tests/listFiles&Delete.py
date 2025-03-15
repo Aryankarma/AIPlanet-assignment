@@ -7,7 +7,7 @@ load_dotenv()
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 assistant = pc.assistant.Assistant(
-    assistant_name="aiplanetassistant", 
+    assistant_name="default", 
 )
 
 files = assistant.list_files()

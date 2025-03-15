@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth/authContext";
 import { BlurFade } from "@/components/ui/blurFade";
+import { toast } from "sonner";
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -60,19 +61,16 @@ const LandingPage = () => {
                         ? navigate("/chat")
                         : alert("Please login to continue");
                     }}
-                    size="lg"
-                    variant="outline"
-                    className="w-full sm:w-auto flex items-center bg-transparent"
-                  >
-                    Try it out
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                    className="text-black bg-gray-100 hover:bg-gray-200 transition-all hover:text-black">
+                    Chat
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (
                   <>
                     <Button
                       onClick={() => navigate("/login")}
                       variant="ghost"
-                      className="text-gray-300 hover:text-white"
+                      className="text-black bg-white hover:bg-gray-100 transition-all hover:text-black"
                     >
                       Sign In
                     </Button>
@@ -128,11 +126,11 @@ const LandingPage = () => {
                 Documentation
               </a>
               <Button
-                onClick={() => navigate("/login")}
+                onClick={() => alert("/login")}
                 variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white"
+                className="w-full justify-start text-gray-300 bg-white hover:text-white"
               >
-                Sign In
+                Sign In 
               </Button>
               <Button
                 onClick={() => navigate("/register")}
@@ -148,13 +146,14 @@ const LandingPage = () => {
       <BlurFade delay={0.1} inView>
 
       {/* Hero Section */}
-      <main className="pt-24 lg:pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8 flex h-[100vh] items-center justify-center">
-        <div className="max-w-7xl mx-auto">
+      <main className="pt-24 lg:pt-32 pb-16 lg:pb-24 px-4 sm:px-6 lg:px-8 flex h-[100vh] items-center justify-center relative rounded-lg shadow-inner overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none inner-shadow" style={{background:"radial-gradient(circle at center top, rgba(6, 26, 57, .75), rgba(173, 216, 230, 0) 70%)", }}></div>
+        <div className="max-w-7xl mx-auto z-[60]">
           <div className="text-center">
             <div className="flex items-center justify-center mb-6">
-              <Card className="bg-blue-500/10 border-blue-500/20 px-4 py-1 inline-flex items-center space-x-2">
+              <Card className="bg-blue-500/10 border-blue-500/20 px-4 py-1 inline-flex items-center space-x-2 rounded-full">
                 <Sparkles className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-blue-500 rounded-full">
+                <span  className="text-sm text-blue-500 rounded-full">
                   Models from Claude & OpenAI
                 </span>
               </Card>
@@ -176,14 +175,17 @@ const LandingPage = () => {
                 onClick={() => {
                   return isAuthenticated
                     ? navigate("/chat")
-                    : alert("Please login to continue");
+                    : (() => {
+                      toast("Redirecting to login")
+                      setTimeout(()=>{
+                        navigate("/login")
+                      }, 1500)
+                    })()
                 }}
-                size="lg"
                 variant="outline"
                 className="w-full sm:w-auto flex items-center bg-transparent"
               >
-                Try it out
-                <ChevronRight className="ml-2 h-4 w-4" />
+                Start Your Free Trial
               </Button>
             </div>
             <div className="mt-12 flex justify-center gap-8">

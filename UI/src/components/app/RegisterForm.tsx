@@ -92,7 +92,19 @@ export function RegisterForm({
 
       return response.data;
     } catch (error: any) {
-      toast("Error ", { description: error.response.data.detail });
+       const status = error.response?.status;
+        status == 400
+        ? toast("Error", {
+            description: error.response?.data.detail,
+            action: {
+              label: "Login",
+              onClick: () => navigate("/login"),
+            },
+          })
+        : toast("Error", {
+            description: error.response?.data.detail,
+          });
+
     } finally {
       nProgress.done();
     }

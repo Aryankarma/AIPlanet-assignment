@@ -14,7 +14,7 @@ export default {
 			}
 		},
 		animation: {
-			opacityOpen: "opacityOpen 250ms"
+			opacityOpen: "opacityOpen 250ms "
 		},
   		borderRadius: {
   			lg: 'var(--radius)',

@@ -1,10 +1,11 @@
-import React, { Dispatch, FormEvent, SetStateAction, useState } from "react";
+import React, { Dispatch, FormEvent, SetStateAction, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Upload, X } from "lucide-react";
 import axios from "axios";
 import NProgress from "nprogress";
 import myAxios from "@/lib/axios";
+import { toast } from "sonner";
 
 interface MessageApiResponse {
   message: string;
@@ -28,6 +29,32 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
 }) => {
   const [inputText, setInputText] = useState("");
   const [isEnterPressed, setIsEnterPressed] = useState(false);
+
+  useEffect(()=> {
+    // createAssistant()
+  },[])
+
+  const createAssistant = async () => {
+    try{
+      const formData = new FormData()
+      formData.append("assistantName", "ass1");
+
+      const response = await myAxios.post<MessageApiResponse>(        
+        "http://localhost:8000/createAssistant",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+          },
+        }
+      )
+
+      console.log(response.data)
+    }catch(error){
+      console.log(error)
+    }
+  }
 
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();

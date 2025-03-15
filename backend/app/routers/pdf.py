@@ -13,55 +13,137 @@ from pdfminer.high_level import extract_text
 from fastapi.encoders import jsonable_encoder
 from pinecone_plugins.assistant.models.chat import Message
 from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
+from ..utils.helpers import update_primary_assistant, get_primary_assistant
+from starlette.requests import Request
+from pydantic import BaseModel
+from jose import JWTError, jwt
 
 router = APIRouter()
 
 load_dotenv()
 NAMESPACE_UUID = uuid.UUID(os.getenv("NAMESPACE_UUID"))
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-ASSISTANT_NAME = "aiplanetassistant"
+ASSISTANT_NAME = "default"
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.DEBUG)
 DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 os.makedirs(DATA_FOLDER_PATH, exist_ok=True)
+SECRET_KEY = "thisismysecret"
+ALGORITHM="HS256"
 
 
-def get_or_create_assistant(assistant_name: str):
-    """Checks if the assistant exists or creates a new one."""
-    assistants = pc.assistant.list_assistants()
+def create_assistant_by_name(assistantName: str):
+    """Creates a new assistant with the given name"""
 
-    assistant_names = []
-    for assistant in assistants:
-        assistant_names.append(assistant.name) 
-    # print("Listing assistants: ", assistant_names)
+    print(f"Inside the create assistant function & Creating assistant with name: {assistantName}")
 
-    assistant_found = None
-    for assistant in assistants:
-        if assistant.name == assistant_name:
-            assistant_found = assistant
-            break
-    
-    if assistant_found:
-        print(f"Assistant '{assistant_name}' found.")
-        assistant = pc.assistant.Assistant(assistant_name=assistant_name)
-    else:
-        print(f"Creating assistant '{assistant_name}'...")
+    try:
         assistant = pc.assistant.create_assistant(
-            assistant_name=assistant_name,
+            assistant_name=assistantName,
             instructions="You are AIPlanet's assistant and are extremely polite.",
             timeout=30,
         )
-        print(f"Assistant '{assistant_name}' created.")
-    
-    return assistant
+        logging.info(f"Assistant '{assistantName}' created successfully.")
+        return assistant
+    except Exception as e:
+        logging.error(f"Error while creating assistant '{assistantName}': {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while creating assistant '{assistantName}': {str(e)}")
+
+
+
+def get_or_create_assistant(assistantName: str, user_email: str):
+    """
+    Checks if the assistant exists; if not, creates a new one using createassistantbyname function.
+    Returns the assistant instance.
+    """
+
+    print("inside get or create assistant and assistantName: ", assistantName)
+
+    # Sanitize and format assistant name -> changes in a format -> aryankarma29---ass1
+    sanitized_email = user_email.replace("@gmail.com", "")
+    full_assistant_name = f"{sanitized_email}---{assistantName}".lower()
+
+    print(f"Checking existence for assistant: {full_assistant_name}")
+
+    # List all existing assistants
+    assistants = pc.assistant.list_assistants()
+    assistant_names = [assistant.name for assistant in assistants]
+    print("Existing assistants:", assistant_names)
+
+    # Search for assistant
+    for assistant in assistants:
+        if assistant.name == full_assistant_name:
+            print(f"Assistant '{full_assistant_name}' found.")
+            return pc.assistant.Assistant(assistant_name=full_assistant_name)
+
+    # If not found, create new
+    print(f"Assistant '{full_assistant_name}' not found. Creating new assistant...")
+    return create_assistant_by_name(full_assistant_name)
+
+
+
+async def get_current_user(request: Request):
+    """Extracts user info from the JWT token stored in cookies"""
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    print("getting current user")
+    print("token: ", token)
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("payload: ", payload)
+        email: str = payload.get("sub")
+        print("email of current user: ", email)
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+class assistantRoute(BaseModel):
+    assistantName: str
+
+
+@router.post("/createAssistant")
+async def create_assistant(
+    assistantName: str = Form(...),
+    user_email: str = Depends(get_current_user)
+) -> JSONResponse:
+
+    get_or_create_assistant(assistantName, user_email)
+    return JSONResponse(content={"message": f"Assistant '{assistantName}' created successfully."})
+
+
+@router.post("/updatePrimaryAssistant")
+async def update_primary_assistant_route(
+    assistantName: str = Form(...),  
+    user_email: str = Depends(get_current_user)
+) -> JSONResponse:
+    """Securely updates the primary assistant for a user"""
+
+    print("data: ", assistantName, user_email)
+    success = await update_primary_assistant(user_email, assistantName)
+
+    if success:
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Primary assistant updated to {assistantName}"
+        })
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update primary assistant")
 
 
 @router.post("/savePdf")
-async def save_pdf(file: UploadFile = File(...)):
+async def save_pdf(file: UploadFile = File(...), user_email: str = Depends(get_current_user)):
     """Uploads a PDF and stores it in the Pinecone assistant."""
     try:
-        assistant = get_or_create_assistant(ASSISTANT_NAME)
-    
+        assistant_name = await get_primary_assistant(user_email)
+        assistant = get_or_create_assistant(assistant_name, user_email)
+        print("final assistant is : ", assistant)
+        print("assistant got: ", assistant)
         print("stored in local")
         temp_file_path = os.path.join(DATA_FOLDER_PATH, file.filename)
         with open(temp_file_path, "wb") as temp_file:
@@ -85,67 +167,24 @@ async def save_pdf(file: UploadFile = File(...)):
 
 
 @router.post("/ask_question")
-async def ask_question(message: str = Form(...)):
+async def ask_question(message: str = Form(...), user_email: str = Depends(get_current_user)):
     """Handles user questions and sends them to the Pinecone assistant."""
     
     try:
-        # print("chatting with assistant")
-        assistant = get_or_create_assistant(ASSISTANT_NAME)
+        assistant_name = await get_primary_assistant(user_email)
+        assistant = get_or_create_assistant(assistant_name, user_email)
+        
+        print(assistant_name)
+        print(assistant)
+
         msg = Message(content=message)
         response = assistant.chat(messages=[msg])
-        
-        # print(response.message)
             
         return {"message": str(response.message.content)}
     
     except Exception as e:
         logging.error(f"Error while processing question: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
-
-
-
-# for a streaming response
-
-# @router.post("/ask_question")
-# async def ask_question(message: str = Form(...)):
-#     """Handles user questions and sends them to the Pinecone assistant."""
-    
-#     try:
-#         assistant = get_or_create_assistant(ASSISTANT_NAME)
-#         msg = Message(content=message)
-
-#         response = assistant.chat(messages=[msg], stream=True)
-        
-#         def stream_response():
-#             for data in response:
-#                 if data:
-#                     yield data.message.content + "\n"
-
-#         return StreamingResponse(stream_response(), media_type="text/plain")
-
-#     except Exception as e:
-#         logging.error(f"Error while processing question: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
-
-
-# @router.post("/fetchDocs")
-# async def fetchDocuments(assistantName: str = Form(...)) -> dict:
-#     """Takes the Assistant name and sends all the documents uploaded to it."""
-
-#     try:
-#         assistant = pc.assistant.Assistant(
-#             assistant_name=assistantName, 
-#         )3
-#         files = assistant.list_files()
-#         logging.info(f"Files fetched: {files}") 
-#         return {"files": str(files)}
-
-#     except Exception as e:
-#         logging.error(f"Error while fetching documents from assistant '{assistantName}': {str(e)}")
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Error while fetching documents: {str(e)}"
-#         )3. 
 
 
 #  helper function to properly send the documents data to the frontend
@@ -169,12 +208,16 @@ def safe_serialize(obj):
         logging.error(f"Serialization error: {e}")
         return str(obj)
 
+
 @router.post("/fetchDocs")
-async def fetch_documents(assistantName: str = Form(...)) -> JSONResponse:
+async def fetch_documents(assistantName: str = Form(...), user_email: str = Depends(get_current_user)) -> JSONResponse:
     """Fetches documents uploaded to the given assistant."""
     try:
+        
+        assistant = get_or_create_assistant(assistantName, user_email)
+
         # Initialize the assistant instance
-        assistant = pc.assistant.Assistant(assistant_name=assistantName)
+        # assistant = pc.assistant.Assistant(assistant_name=assistantName)
         
         # Fetch files and debug their structure
         files = assistant.list_files()
@@ -212,8 +255,7 @@ async def delete_document(docID: str = Form(...), assistantName:str = Form(...))
     except Exception as e:
         logging.error(f"Error while deleting document with ID {docID} from assistant {assistantName}, error : ", {str(e)})
         raise HTTPException(status_code=500, detail=f"Error while deleting document: {str(e)} ")
-    
-    
+
 
 @router.post("/deleteAssistant")
 async def getAssistants(assistantName: str = Form(...)) -> JSONResponse:
@@ -233,19 +275,37 @@ async def getAssistants(assistantName: str = Form(...)) -> JSONResponse:
         raise HTTPException(status_code=500, detail=f"Error while deleting assistant: {assistantName}")
 
 
-# make sure to add the association for each user name with assistant while making and rendering according to the name
+
+
 @router.post("/getAssistants")
-async def getAssistants(userName: str = Form(...)) -> JSONResponse:
-    """Fetch all the assistants created and then returns assistant that are associated with the particular user name"""
+async def getAssistants(user_email: str = Depends(get_current_user)) -> JSONResponse:
+    """
+    Fetch all assistants and return only those associated with the logged-in user.
+    """
 
     try:
-        print(f"fetching assistants for {userName}")
+        print(f"Fetching assistants for user: {user_email}")
+
         allAssistants = pc.assistant.list_assistants()
-        # print("assistant fetched, allAssistants : ", allAssistants)
-        serialized_assistants = safe_serialize(allAssistants)
+
+        # Extract user's unique prefix (email before @gmail.com)
+        user_prefix = user_email.replace("@gmail.com", "").lower()
+        print(f"User prefix: {user_prefix}")
+        print("All assistants fetched:", [assistant.name for assistant in allAssistants])
+
+        # Filter assistants whose 'name' starts with user_prefix followed by '---'
+        filtered_assistants = [
+            assistant for assistant in allAssistants
+            if assistant.name.startswith(f"{user_prefix}---")
+        ]
+
+        print(f"Filtered assistants for user '{user_prefix}': {[a.name for a in filtered_assistants]}")
+
+        # Serialize and return filtered assistants
+        serialized_assistants = safe_serialize(filtered_assistants)
         json_compatible_assistants = jsonable_encoder({"assistants": serialized_assistants})
         return JSONResponse(content=json_compatible_assistants)
-    
+
     except Exception as e:
-        logging.error(f"Error while fetching assistants, for username {userName}, error :, {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error while fetching assistants, for username {userName}")
+        logging.error(f"Error while fetching assistants for user {user_email}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while fetching assistants for user {user_email}: {str(e)}")
