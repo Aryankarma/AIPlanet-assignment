@@ -278,11 +278,11 @@ export const AppSidebar = memo(
     );
 
     useEffect(() => {
-      if (isFirstRender.current) {
-        // First render, skip API call
-        isFirstRender.current = false;
-        return;
-      }
+      // if (isFirstRe+nder.current) {
+      //   // First render, skip API call
+      //   isFirstRender.current = false;
+      //   return;
+      // }
 
       // Actual update logic only when primaryAssistant changes after first mount
       localStorage.setItem("primaryAssistant", primaryAssistant);
@@ -291,26 +291,26 @@ export const AppSidebar = memo(
     }, [primaryAssistant]);
 
     useEffect(() => {
-      console.log("primaryAssistant: ", primaryAssistant);
-    }, [primaryAssistant]);
+      console.log("primaryAssistant: ", primaryAssistant)
+    }, [primaryAssistant])
 
     useEffect(() => {
-      localStorage.setItem("activeItem", activeItem); // Save as plain string
-    }, [activeItem]);
+      localStorage.setItem("activeItem", activeItem)
+    }, [activeItem])
 
     useEffect(() => {
-      fetchDocs();
-    }, [primaryAssistant]);
+      fetchDocs()
+    }, [primaryAssistant])
 
     useEffect(() => {
-      fetchDocs();
-      fetchAssistants();
-    }, []);
+      fetchDocs()
+      fetchAssistants()
+    }, [])
 
-    const { setOpen } = useSidebar();
+    const { setOpen } = useSidebar()
 
     const updatePrimaryAssistant = async (assistantName: string) => {
-      nProgress.start();
+      nProgress.start()
 
       const formData = new FormData();
       formData.append("assistantName", assistantName);
@@ -390,7 +390,7 @@ export const AppSidebar = memo(
             headers: { "Content-Type": "multipart/form-data" },
           }
         );
-        console.log("assistants available : ", response);
+        console.log("assistants available : ", response.data.assistants);
         if (response?.data?.assistants) {
           setAssistants(response.data.assistants);
         }
@@ -527,7 +527,7 @@ export const AppSidebar = memo(
               key={doc.created_on}
               className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
             >
-              {doc.name}
+              {doc.name.slice(0, 28) + "..."}
             </span>
 
             <span className="text-xs font-light">
@@ -573,9 +573,13 @@ export const AppSidebar = memo(
         );
       }
 
-      const filteredAssistantData = (assistants as AssistantObject[]).filter(
-        (assistant) => !deletedAssistants.includes(assistant?.name)
-      );
+      const filteredAssistantData = (assistants as AssistantObject[])
+      .filter((assistant) => !deletedAssistants.includes(assistant?.name))
+      .map((assistant) => ({
+        ...assistant,
+        name: assistant.name.split('---')[1] || assistant.name,
+      }));
+    
 
       return filteredAssistantData.map((assistant, id) => (
         <div

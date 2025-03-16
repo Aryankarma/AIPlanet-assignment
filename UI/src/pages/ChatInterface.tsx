@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, X } from "lucide-react";
+import { Send, Upload, X, UserPlus } from "lucide-react";
 import { ModeToggle } from "@/components/ui/ThemeToggle";
-import { v5 as uuidv5 } from "uuid";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   SidebarInset,
   SidebarProvider,
@@ -42,7 +47,7 @@ const ChatInterface = () => {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const theme = useTheme().theme
+  const theme = useTheme().theme;
 
   interface LoginResponse {
     access_token: string;
@@ -52,11 +57,14 @@ const ChatInterface = () => {
     alert("data sending for user reg");
     alert(JSON.stringify({ name, password, email }));
     try {
-      const response = await myAxios.post(`http://localhost:8000/auth/register`, {
-        name,
-        password,
-        email,
-      });
+      const response = await myAxios.post(
+        `http://localhost:8000/auth/register`,
+        {
+          name,
+          password,
+          email,
+        }
+      );
       console.log(response.data);
       alert("Successfully registered user");
       listUsers();
@@ -158,7 +166,7 @@ const ChatInterface = () => {
       return;
     }
 
-    const assistantName = localStorage.getItem("primaryAssistant")
+    const assistantName = localStorage.getItem("primaryAssistant");
 
     try {
       console.log("save pdf function start");
@@ -179,7 +187,7 @@ const ChatInterface = () => {
         "An error occurred while saving the PDF. Check the console for details."
       );
     } finally {
-      console.log("save pdf function done")
+      console.log("save pdf function done");
     }
   };
 
@@ -258,21 +266,60 @@ const ChatInterface = () => {
                   className="hidden"
                   accept=".pdf"
                 />
-                <Button
-                  variant="outline"
-                  className={`gap-2 ${
-                    selectedFile === null ? "flex" : "hidden"
-                  }`}
-                  onClick={handleUploadClick}
-                >
-                  <Upload className={`h-4 w-4`} />
-                  Upload Doc
-                </Button>
-                <ModeToggle />
+                <TooltipProvider delayDuration={750}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`gap-2 ${
+                          selectedFile === null ? "flex" : "hidden"
+                        }`}
+                        onClick={handleUploadClick}
+                      >
+                        <Upload className={`h-4 w-4`} />
+                        Upload Doc
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Upload document to your primary assistant</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider delayDuration={750}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" className={`gap-2 px-3`}>
+                        <UserPlus className={`h-4 w-4`} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Add Assistant</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider delayDuration={750}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ModeToggle />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Theme</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </header>
             <main className="flex-1 overflow-y-auto mt-[72px] mb-[80px] p-4">
               <div className="mx-auto max-w-[800px] space-y-6">
+                {messages.length === 0 && (
+                  <div className="flex items-end justify-center h-64">
+                    <p className="text-primary/15 select-none text-2xl font-semibold">
+                      Ask anything on your information — get instant, AI-powered
+                      answers.
+                    </p>
+                  </div>
+                )}
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -293,9 +340,7 @@ const ChatInterface = () => {
                       </div>
                       <div
                         className={`prose list-decimal w-full max-w-none flex flex-col gap-3 leading-loose ${
-                          theme === "dark"
-                            ? "prose-invert text-gray-300"
-                            : null
+                          theme === "dark" ? "prose-invert text-gray-300" : null
                         }`}
                       >
                         <Markdown>{message.text}</Markdown>

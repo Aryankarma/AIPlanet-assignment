@@ -213,7 +213,7 @@ def safe_serialize(obj):
 async def fetch_documents(assistantName: str = Form(...), user_email: str = Depends(get_current_user)) -> JSONResponse:
     """Fetches documents uploaded to the given assistant."""
     try:
-        
+
         assistant = get_or_create_assistant(assistantName, user_email)
 
         # Initialize the assistant instance
@@ -242,12 +242,13 @@ async def fetch_documents(assistantName: str = Form(...), user_email: str = Depe
 
 
 @router.post("/deleteDoc")
-async def delete_document(docID: str = Form(...), assistantName:str = Form(...)) -> JSONResponse:
+async def delete_document(docID: str = Form(...), assistantName:str = Form(...), user_email: str = Depends(get_current_user)) -> JSONResponse:
     """Deletes a document from pinecone assistant by recieving the doc id"""
     
     try:
         # print("Deleting doc with id ", docID)
-        assistant = pc.assistant.Assistant(assistant_name=assistantName)
+        assistant = get_or_create_assistant(assistantName, user_email)
+        # assistant = pc.assistant.Assistant(assistant_name=assistantName)
         response = assistant.delete_file(file_id=docID)
         print("deleted.")
         return JSONResponse(response)
