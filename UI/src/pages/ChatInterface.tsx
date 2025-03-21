@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, FormEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, X, UserPlus } from "lucide-react";
+import { Upload, X, UserPlus } from "lucide-react";
 import { ModeToggle } from "@/components/ui/ThemeToggle";
 import {
   Tooltip,
@@ -11,18 +11,42 @@ import {
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/ui/sidebar/appSidebar";
-import { Separator } from "@/components/ui/separator";
-import axios from "axios";
-import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import Markdown from "react-markdown";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import SendMessageInput from "@/components/app/sendMessageInput";
-import { Link } from "react-router-dom";
-import NProgress from "nprogress";
 import myAxios from "@/lib/axios";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { toast } from "sonner";
+import nProgress from "nprogress";
+import { useSidebarStore } from "@/stores/useSidebarStore";
+
+const FormSchema = z.object({
+  assistantName: z
+    .string()
+    .min(3, { message: "Assistant name must be at least 3 characters." })
+    .max(15, { message: "Assistant name cannot exceed 15 characters." })
+    .regex(/^[a-z]+$/, { message: "Only lowercase letters are allowed." }),
+});
 
 interface Message {
   id: number;
@@ -35,107 +59,18 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(
-    () => JSON.parse(localStorage.getItem("sidebarOpen") || "false") // Load from localStorage
+  const [open, setOpen] = useState(false); // Control popover state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    JSON.parse(localStorage.getItem("sidebarOpen") || "false")
   );
+  const { fetchAssistants, fetchDocs } = useSidebarStore();
 
-  // dummy states for register
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [email, setemail] = useState("");
-  const [token, setToken] = useState<string>("");
-  const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const theme = useTheme().theme;
 
-  interface LoginResponse {
-    access_token: string;
-  }
-
-  const handleRegister = async () => {
-    alert("data sending for user reg");
-    alert(JSON.stringify({ name, password, email }));
-    try {
-      const response = await myAxios.post(
-        `http://localhost:8000/auth/register`,
-        {
-          name,
-          password,
-          email,
-        }
-      );
-      console.log(response.data);
-      alert("Successfully registered user");
-      listUsers();
-      return response.data;
-    } catch (error: any) {
-      alert(error.response.data.detail);
-    }
-  };
-
-  const loginUser2 = async () => {
-    try {
-      const response = await myAxios.post(
-        `http://localhost:8000/auth/login`,
-        { name, password },
-        { withCredentials: true }
-      );
-      listUsers();
-      console.log(response);
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { detail: "Unexpected error occurred" };
-    }
-  };
-
-  const loginUser = async () => {
-    alert(JSON.stringify({ email, password }));
-    try {
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
-
-      const response = await myAxios.post(
-        `http://localhost:8000/auth/login`,
-        formData,
-        { withCredentials: true }
-      );
-
-      console.log("login successfull");
-      console.log(response);
-      alert(JSON.stringify(response));
-      return response.data;
-    } catch (error: any) {
-      throw error.response?.data || { detail: "Unexpected error occurred" };
-    }
-  };
-
-  const handleLogin = async () => {
-    try {
-      const response = await loginUser();
-      console.log(response);
-      setMessage("Login successful!");
-      alert("Login successful");
-    } catch (error: any) {
-      setMessage(error.detail || "Login failed");
-      console.error("Login error:", error);
-    }
-  };
-
-  const listUsers = async () => {
-    try {
-      const response = await myAxios.get(`http://localhost:8000/auth/users`);
-      console.log(response.data);
-      alert("fetched");
-      return response.data;
-    } catch (error: any) {
-      alert(error.response.data.detail);
-    }
-  };
-
   useEffect(() => {
-    localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen)); // Save to localStorage
+    localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
   }, [isSidebarOpen]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +104,8 @@ const ChatInterface = () => {
     const assistantName = localStorage.getItem("primaryAssistant");
 
     try {
-      console.log("save pdf function start");
+      toast("Uploading document...");
+      nProgress.start();
       const formData = new FormData();
       formData.append("file", file);
       formData.append("assistantName", assistantName || "");
@@ -180,20 +116,67 @@ const ChatInterface = () => {
       );
 
       console.log("PDF saved successfully:", response.data);
+      toast("Document uploaded successfully.");
+      fetchDocs();
       return response.data;
-    } catch (error) {
-      console.error(error);
-      alert(
+    } catch (error: any) {
+      console.error(error?.response?.data);
+      toast(
         "An error occurred while saving the PDF. Check the console for details."
       );
     } finally {
-      console.log("save pdf function done");
+      handleRemoveFile()
+      nProgress.done();
     }
   };
 
   useEffect(() => {
     messagesEndRef?.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // create assistant form
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      assistantName: "",
+    },
+  });
+
+  function onSubmit(data: z.infer<typeof FormSchema>) {
+    toast(`Creating assistant: ${data.assistantName}`);
+    createAssistant(data.assistantName);
+  }
+
+  const createAssistant = async (name: string) => {
+    try {
+      nProgress.start();
+      const formData = new FormData();
+      formData.append("assistantName", name);
+
+      const response = await myAxios.post<{
+        message: string;
+        status: number | string;
+      }>("http://localhost:8000/createAssistant", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Accept: "application/json",
+        },
+      });
+
+      console.log(response.data);
+      response.data.status == 200
+        ? toast(`Assistant created successfully.`)
+        : null;
+      fetchAssistants();
+    } catch (error) {
+      toast(
+        "Error occured while creating assistant, check console for more details"
+      );
+      console.log(error);
+    } finally {
+      nProgress.done();
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen w-screen">
@@ -240,23 +223,25 @@ const ChatInterface = () => {
               {/* <button onClick={handleLogin}>Login</button> */}
               {/* <button onClick={loginUser}>Register</button> */}
               {/* <Link to="/login">Go to login</Link> */}
-              <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {selectedFile ? (
-                  <div className="flex items-center justify-between p-0 pl-2 border  rounded-md">
-                    <span>{selectedFile.name}</span>
+                  <div className="flex items-center justify-between p-0 pl-2 rounded-md">
                     <Button
-                      className="ml-2 bg-sidebar text-primary border"
-                      variant="ghost"
+                      className="px-3 flex gap-4 text-primary w-full"
+                      variant="outline"
                       size="icon"
-                      onClick={handleRemoveFile}
+                      // onClick={handleRemoveFile}
                     >
-                      <X className="h-2 w-2" />
+                      <p>
+                      Uploading {selectedFile.name.slice(0, 20)}...
+                      </p>
+                      {/* <X className="h-2 w-2" /> */}
                       <span className="sr-only">Remove file</span>
                     </Button>
                   </div>
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    No file selected
+                    {/* No file selected */}
                   </span>
                 )}
                 <input
@@ -287,17 +272,72 @@ const ChatInterface = () => {
                 </TooltipProvider>
                 <TooltipProvider delayDuration={750}>
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" className={`gap-2 px-3`}>
-                        <UserPlus className={`h-4 w-4`} />
-                      </Button>
-                    </TooltipTrigger>
+                    <Popover open={open} onOpenChange={setOpen}>
+                      <PopoverTrigger asChild>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" className="gap-2 px-3">
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72">
+                        <div className="grid gap-8">
+                          <div className="space-y-4">
+                            <h4 className="font-medium leading-none">
+                              Create Assistant
+                            </h4>
+                            <div className="flex w-full max-w-sm items-center">
+                              <Form {...form}>
+                                <form
+                                  onSubmit={form.handleSubmit((data) => {
+                                    setOpen(false);
+                                    onSubmit(data);
+                                  })}
+                                  className="w-full space-y-3"
+                                >
+                                  <FormField
+                                    control={form.control}
+                                    name="assistantName"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        {/* <FormLabel>Assistant Name</FormLabel> */}
+                                        <FormControl>
+                                          <div className="flex w-full max-w-sm items-center space-x-2">
+                                            <Input
+                                              placeholder="Assistant name"
+                                              {...field}
+                                              onChange={(e) => {
+                                                const value = e.target.value
+                                                  .toLowerCase()
+                                                  .replace(/\s+/g, "")
+                                                  .slice(0, 15);
+                                                field.onChange(value);
+                                              }}
+                                            />
+                                            <Button className="" type="submit">
+                                              Create
+                                            </Button>
+                                          </div>
+                                        </FormControl>
+                                        {/* <FormDescription>
+                                          This is your public display name.
+                                        </FormDescription> */}
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </form>
+                              </Form>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <TooltipContent>
-                      <p>Add Assistant</p>
+                      <p>Create Assistant</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-
                 <TooltipProvider delayDuration={750}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -355,6 +395,7 @@ const ChatInterface = () => {
             {/* Message input here */}
             <SendMessageInput
               setMessages={setMessages}
+              messages={messages}
               isSidebarOpen={isSidebarOpen}
             />
           </div>

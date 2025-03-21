@@ -46,10 +46,13 @@ export default function VerifyEmail() {
       });
       
       console.log("successfull verify email")
-      alert("Email verified successfully, sending u to /chat");
+      console.log("This is misbehaving here, not forwarding to /chat once the email is successfully verified, check properly.")
+      // alert("Email verified successfully, sending u to /chat");
       setTimeout(() => {
+        localStorage.setItem("primaryAssistant", "default"); // resets the primary assistant to default
+        localStorage.setItem("sidebarOpen", "false"); // reset sidebar open value to false
         navigate("/chat");
-      }, 5000);
+      }, 3000);
     } catch (error: any) {
       // Generic error handling
       console.log("error maybe")

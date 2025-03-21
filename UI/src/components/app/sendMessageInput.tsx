@@ -1,4 +1,10 @@
-import React, { Dispatch, FormEvent, SetStateAction, useEffect, useState } from "react";
+import React, {
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Upload, X } from "lucide-react";
@@ -6,6 +12,7 @@ import axios from "axios";
 import NProgress from "nprogress";
 import myAxios from "@/lib/axios";
 import { toast } from "sonner";
+import { useSidebarStore } from "@/stores/useSidebarStore";
 
 interface MessageApiResponse {
   message: string;
@@ -20,41 +27,23 @@ interface Message {
 
 interface sendMessageInputProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
+  messages: Message[];
   isSidebarOpen: boolean;
 }
 
 const SendMessageInput: React.FC<sendMessageInputProps> = ({
   setMessages,
+  messages,
   isSidebarOpen,
 }) => {
   const [inputText, setInputText] = useState("");
   const [isEnterPressed, setIsEnterPressed] = useState(false);
 
-  useEffect(()=> {
+  useEffect(() => {
     // createAssistant()
-  },[])
+  }, []);
 
-  const createAssistant = async () => {
-    try{
-      const formData = new FormData()
-      formData.append("assistantName", "ass1");
-
-      const response = await myAxios.post<MessageApiResponse>(        
-        "http://localhost:8000/createAssistant",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Accept: "application/json",
-          },
-        }
-      )
-
-      console.log(response.data)
-    }catch(error){
-      console.log(error)
-    }
-  }
+  const { fetchDocs } = useSidebarStore();
 
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
@@ -79,6 +68,24 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
       NProgress.start();
       const formData = new FormData();
       formData.append("message", inputText);
+
+      // Create a simplified history array with just the necessary data
+      const chatHistory = messages.map((msg) => ({
+        text: msg.text,
+        sender: msg.sender,
+      }));
+
+      console.log("chat history: ", chatHistory);
+
+      // Add the current message to history
+      chatHistory.push({
+        text: inputText,
+        sender: "user",
+      });
+
+      // Only include the last 10 messages in the history (3 2 way conversations, 3 q/a bw the user and ai)
+      const recentChatHistory = chatHistory.slice(-10);
+      formData.append("chat_history", JSON.stringify(recentChatHistory));
       setInputText("");
 
       const response = await myAxios.post<MessageApiResponse>(
@@ -131,13 +138,14 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
     >
       <div className="relative w-full">
         <form
-          className="flex items-center rounded-xl max-w-[800px] mx-auto border-2 border-secondary hover:border-gray-500 active:border-1 transition-all relative hover:border-opacity-50"
+          className="flex items-center rounded-xl max-w-[800px] mx-auto border-2 border-neutral-500/25 active:border-1 transition-all relative hover:border-neutral-500/50"
           onSubmit={sendMessage}
         >
           <Input
             className="py-6 border-none w-[800px] active:border-none focus:border-none focus-visible::border-none focus-within::border-none focus-visible:ring-transparent"
             placeholder="Send a message..."
             type="text"
+            autoFocus
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}

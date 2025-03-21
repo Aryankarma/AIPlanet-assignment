@@ -37,6 +37,7 @@ import nProgress from "nprogress";
 import myAxios from "@/lib/axios";
 import { toast } from "sonner";
 import { c } from "framer-motion/dist/types.d-6pKw1mTI";
+import { useSidebarStore } from "@/stores/useSidebarStore";
 
 const data = {
   user: {
@@ -238,18 +239,6 @@ interface AssistantResponseData {
   assistants: AssistantObject[];
 }
 
-interface Document {
-  created_on: string;
-  id: string;
-  metadata: null | Record<string, any>;
-  name: string;
-  percent_done: number;
-  signed_url: null | string;
-  size: number;
-  status: string;
-  updated_on: string;
-}
-
 export const AppSidebar = memo(
   ({
     setIsSidebarOpen,
@@ -258,24 +247,45 @@ export const AppSidebar = memo(
     setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   }) => {
     const isFirstRender = useRef(true);
-    const [docs, setDocs] = useState<Object>({});
-    const [assistants, setAssistants] = useState<Object>({});
-    const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
-    const [docsLoading, setDocsLoading] = useState<boolean>(true);
-    const [deletingDocID, setDeletingDocID] = useState<string | null>(null);
-    const [deletedDocs, setDeletedDocs] = useState<string[]>([""]);
-    const [deletedAssistants, setDeletedAssistants] = useState<string[]>([""]);
-    const [sidebarError, setSidebarError] = useState<string | null>(null);
-    const [deletingAssistantID, setDeletingAssistantID] = useState<
-      string | null
-    >(null);
-    const [primaryAssistant, setPrimaryAssistant] = useState<string>(
-      () => localStorage.getItem("primaryAssistant") || "default"
-    );
+    // const [docs, setDocs] = useState<Object>({})
+    // const [assistants, setAssistants] = useState<Object>({})
+    // const [sidebarLoading, setSidebarLoading] = useState<boolean>(true)
+    // const [docsLoading, setDocsLoading] = useState<boolean>(true)
+    // const [deletingDocID, setDeletingDocID] = useState<string | null>(null)
+    // const [deletedDocs, setDeletedDocs] = useState<string[]>([""])
+    // const [deletedAssistants, setDeletedAssistants] = useState<string[]>([""])
+    // const [sidebarError, setSidebarError] = useState<string | null>(null)
+    // const [deletingAssistantID, setDeletingAssistantID] = useState<
+    //   string | null
+    // >(null)
+    // const [primaryAssistant, setPrimaryAssistant] = useState<string>(
+    //   () => localStorage.getItem("primaryAssistant") || "default"
+    // )
 
-    const [activeItem, setActiveItem] = useState<string>(
-      () => localStorage.getItem("activeItem") || "Docs" // Fallback to "Docs" if null
-    );
+    // const [activeItem, setActiveItem] = useState<string>(
+    //   () => localStorage.getItem("activeItem") || "Docs" // Fallback to "Docs" if null
+    // )
+
+    const {
+      docs,
+      assistants,
+      sidebarLoading,
+      docsLoading,
+      deletingDocID,
+      deletingAssistantID,
+      primaryAssistant,
+      activeItem,
+      deletedDocs,
+      deletedAssistants,
+      sidebarError,
+
+      setActiveItem,
+      updatePrimaryAssistant,
+      fetchDocs,
+      fetchAssistants,
+      deleteDocument,
+      deleteAssistant,
+    } = useSidebarStore();
 
     useEffect(() => {
       // if (isFirstRe+nder.current) {
@@ -291,200 +301,200 @@ export const AppSidebar = memo(
     }, [primaryAssistant]);
 
     useEffect(() => {
-      console.log("primaryAssistant: ", primaryAssistant)
-    }, [primaryAssistant])
+      console.log("primaryAssistant: ", primaryAssistant);
+    }, [primaryAssistant]);
 
     useEffect(() => {
-      localStorage.setItem("activeItem", activeItem)
-    }, [activeItem])
+      localStorage.setItem("activeItem", activeItem);
+    }, [activeItem]);
 
     useEffect(() => {
-      fetchDocs()
-    }, [primaryAssistant])
+      fetchDocs();
+    }, [primaryAssistant]);
 
     useEffect(() => {
-      fetchDocs()
-      fetchAssistants()
-    }, [])
+      fetchDocs();
+      fetchAssistants();
+    }, []);
 
-    const { setOpen } = useSidebar()
+    const { setOpen } = useSidebar();
 
-    const updatePrimaryAssistant = async (assistantName: string) => {
-      nProgress.start()
+    // const updatePrimaryAssistant = async (assistantName: string) => {
+    //   nProgress.start()
 
-      const formData = new FormData();
-      formData.append("assistantName", assistantName);
+    //   const formData = new FormData()
+    //   formData.append("assistantName", assistantName)
 
-      try {
-        const response: any = await myAxios.post(
-          "http://localhost:8000/updatePrimaryAssistant",
-          formData,
-          {
-            withCredentials: true,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+    //   try {
+    //     const response: any = await myAxios.post(
+    //       "http://localhost:8000/updatePrimaryAssistant",
+    //       formData,
+    //       {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       }
+    //     )
 
-        console.log("Primary assistant update response:", response);
+    //     console.log("Primary assistant update response:", response)
 
-        if (response?.data?.success) {
-          setPrimaryAssistant(assistantName);
-          localStorage.setItem("primaryAssistant", assistantName);
-          toast(`Primary Assistant updated to: ${assistantName}`);
-        }
+    //     if (response?.data?.success) {
+    //       setPrimaryAssistant(assistantName)
+    //       localStorage.setItem("primaryAssistant", assistantName)
+    //       toast(`Primary Assistant updated to: ${assistantName}`)
+    //     }
 
-        return response.data;
-      } catch (err) {
-        console.error(err);
-        return null;
-      } finally {
-        nProgress.done();
-      }
-    };
+    //     return response.data;
+    //   } catch (err) {
+    //     console.error(err)
+    //     return null;
+    //   } finally {
+    //     nProgress.done()
+    //   }
+    // };
 
-    const fetchDocs = async () => {
-      setDocsLoading(true);
-      nProgress.start();
-      setSidebarError(null);
+    // const fetchDocs = async () => {
+    //   setDocsLoading(true)
+    //   nProgress.start()
+    //   setSidebarError(null)
 
-      const formData = new FormData();
-      formData.append("assistantName", primaryAssistant);
+    //   const formData = new FormData()
+    //   formData.append("assistantName", primaryAssistant)
 
-      try {
-        const response: { data: DocsResponseData } = await myAxios.post(
-          "http://localhost:8000/fetchDocs",
-          formData,
-          {
-            withCredentials: true,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
-        console.log("documents ", response);
-        if (response?.data?.files) {
-          setDocs(response.data.files);
-        }
-      } catch (err) {
-        setSidebarError("Failed to fetch documents");
-        console.error(err);
-      } finally {
-        nProgress.done();
-        setDocsLoading(false);
-      }
-    };
+    //   try {
+    //     const response: { data: DocsResponseData } = await myAxios.post(
+    //       "http://localhost:8000/fetchDocs",
+    //       formData,
+    //       {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       }
+    //     )
+    //     console.log("documents ", response)
+    //     if (response?.data?.files) {
+    //       setDocs(response.data.files)
+    //     }
+    //   } catch (err) {
+    //     setSidebarError("Failed to fetch documents")
+    //     console.error(err)
+    //   } finally {
+    //     nProgress.done()
+    //     setDocsLoading(false)
+    //   }
+    // };
 
-    // send username in params when auth gets setup
-    const fetchAssistants = async () => {
-      setSidebarLoading(true);
-      setSidebarError(null);
+    // // send username in params when auth gets setup
+    // const fetchAssistants = async () => {
+    //   setSidebarLoading(true)
+    //   setSidebarError(null)
 
-      const formData = new FormData();
-      formData.append("dummy", "dummy"); // you can remove this if backend expects nothing
+    //   const formData = new FormData()
+    //   formData.append("dummy", "dummy") // you can remove this if backend expects nothing
 
-      try {
-        nProgress.start();
-        const response: { data: AssistantResponseData } = await myAxios.post(
-          "http://localhost:8000/getAssistants",
-          formData,
-          {
-            withCredentials: true,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
-        console.log("assistants available : ", response.data.assistants);
-        if (response?.data?.assistants) {
-          setAssistants(response.data.assistants);
-        }
-      } catch (err) {
-        setSidebarError("Failed to fetch documents");
-        console.error(err);
-      } finally {
-        nProgress.done();
-        setSidebarLoading(false);
-      }
-    };
+    //   try {
+    //     nProgress.start()
+    //     const response: { data: AssistantResponseData } = await myAxios.post(
+    //       "http://localhost:8000/getAssistants",
+    //       formData,
+    //       {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       }
+    //     )
+    //     console.log("assistants available : ", response.data.assistants)
+    //     if (response?.data?.assistants) {
+    //       setAssistants(response.data.assistants)
+    //     }
+    //   } catch (err) {
+    //     setSidebarError("Failed to fetch documents")
+    //     console.error(err)
+    //   } finally {
+    //     nProgress.done()
+    //     setSidebarLoading(false)
+    //   }
+    // };
 
-    const deleteDocument = async (id: string) => {
-      console.log("DataStore from fronyend: ", id);
+    // const deleteDocument = async (id: string) => {
+    //   console.log("DataStore from fronyend: ", id)
 
-      try {
-        if (!id) {
-          console.error("No id provided!");
-          return;
-        }
+    //   try {
+    //     if (!id) {
+    //       console.error("No id provided!")
+    //       return;
+    //     }
 
-        // console.log("id from frontend:", id);
+    //     // console.log("id from frontend:", id)
 
-        // // Safely convert to valid JSON string
-        // const validJsonString = id
-        //   .replace(/'/g, '"')
-        //   .replace(/\bNone\b/g, 'null');
+    //     // // Safely convert to valid JSON string
+    //     // const validJsonString = id
+    //     //   .replace(/'/g, '"')
+    //     //   .replace(/\bNone\b/g, 'null')
 
-        // const parsedObject: { id: string } = JSON.parse(validJsonString);
+    //     // const parsedObject: { id: string } = JSON.parse(validJsonString)
 
-        console.log("Extracted ID:", id);
+    //     console.log("Extracted ID:", id)
 
-        nProgress.start();
-        setDeletingDocID(id);
-        const formData = new FormData();
-        formData.append("docID", id);
-        formData.append("assistantName", primaryAssistant);
+    //     nProgress.start()
+    //     setDeletingDocID(id)
+    //     const formData = new FormData()
+    //     formData.append("docID", id)
+    //     formData.append("assistantName", primaryAssistant)
 
-        const response = await myAxios.post(
-          "http://localhost:8000/deleteDoc",
-          formData,
-          {
-            withCredentials: true,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+    //     const response = await myAxios.post(
+    //       "http://localhost:8000/deleteDoc",
+    //       formData,
+    //       {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       }
+    //     )
 
-        if (response.status === 200) {
-          // add a successfully deleted doc toast here
-          toast("Document deleted successfully.");
-          // fetchDocs();
-          setDeletedDocs((prev) => [...prev, id]);
-          setDeletingDocID(null);
-        }
-      } catch (error) {
-        console.error("error : ", error);
-      } finally {
-        nProgress.done();
-      }
-    };
+    //     if (response.status === 200) {
+    //       // add a successfully deleted doc toast here
+    //       toast("Document deleted successfully.")
+    //       // fetchDocs()
+    //       setDeletedDocs((prev) => [...prev, id])
+    //       setDeletingDocID(null)
+    //     }
+    //   } catch (error) {
+    //     console.error("error : ", error)
+    //   } finally {
+    //     nProgress.done()
+    //   }
+    // };
 
-    // check this out, and rewrite (this one is not perfect)
-    const deleteAssistant = async (assistantName: string) => {
-      console.log("DataStore from fronyend: ", assistantName);
+    // // check this out, and rewrite (this one is not perfect)
+    // const deleteAssistant = async (assistantName: string) => {
+    //   console.log("DataStore from fronyend: ", assistantName)
 
-      try {
-        nProgress.start();
-        setDeletingAssistantID(assistantName);
-        const formData = new FormData();
-        formData.append("assistantName", assistantName);
+    //   try {
+    //     nProgress.start()
+    //     setDeletingAssistantID(assistantName)
+    //     const formData = new FormData()
+    //     formData.append("assistantName", assistantName)
 
-        const response = await myAxios.post(
-          "http://localhost:8000/deleteAssistant",
-          formData,
-          {
-            withCredentials: true,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+    //     const response = await myAxios.post(
+    //       "http://localhost:8000/deleteAssistant",
+    //       formData,
+    //       {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       }
+    //     )
 
-        if (response.status === 200) {
-          // add a successfully deleted assistant toast here
-          toast("Assistant deleted successfully.");
-          // fetchDocs();
-          setDeletedAssistants((prev) => [...prev, assistantName]);
-          setDeletingAssistantID(null);
-          updatePrimaryAssistant("default");
-        }
-      } catch (error) {
-        console.error("error : ", error);
-      } finally {
-        nProgress.done();
-      }
-    };
+    //     if (response.status === 200) {
+    //       // add a successfully deleted assistant toast here
+    //       toast("Assistant deleted successfully.")
+    //       // fetchDocs()
+    //       setDeletedAssistants((prev) => [...prev, assistantName])
+    //       setDeletingAssistantID(null)
+    //       updatePrimaryAssistant("default")
+    //     }
+    //   } catch (error) {
+    //     console.error("error : ", error)
+    //   } finally {
+    //     nProgress.done()
+    //   }
+    // };
 
     const renderDocs = () => {
       if (docsLoading) {
@@ -574,12 +584,15 @@ export const AppSidebar = memo(
       }
 
       const filteredAssistantData = (assistants as AssistantObject[])
-      .filter((assistant) => !deletedAssistants.includes(assistant?.name))
-      .map((assistant) => ({
-        ...assistant,
-        name: assistant.name.split('---')[1] || assistant.name,
-      }));
-    
+        .filter((assistant) => !deletedAssistants.includes(assistant?.name.split("---")[1]))
+        .map((assistant) => ({
+          ...assistant,
+          name: assistant.name.split("---")[1] || assistant.name,
+        }))
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
 
       return filteredAssistantData.map((assistant, id) => (
         <div
@@ -593,7 +606,7 @@ export const AppSidebar = memo(
               <div className="flex flex-col text-left">
                 <TooltipTrigger className="p-0 bg-transparent mr-auto border-none focus:outline-none hover:opacity-75">
                   <span
-                    onClick={() => setPrimaryAssistant(assistant.name)}
+                    onClick={() => updatePrimaryAssistant(assistant.name)}
                     className={`text-wrap ${
                       assistant.name == primaryAssistant ? "text-blue-500" : ""
                     }`}
@@ -618,9 +631,14 @@ export const AppSidebar = memo(
             </Tooltip>
           </TooltipProvider>
           <Button
-            onClick={() => deleteAssistant(assistant?.name)}
+            onClick={
+              assistant?.name == "default"
+                ? () => toast("Can't delete default")
+                : () => deleteAssistant(assistant?.name)
+            }
             className="px-2 py-1 hover:bg-red-700 hover:text-white hover:border-transparent"
             variant="outline"
+            disabled={assistant?.name == "default" ? true : false}
           >
             {deletingAssistantID === assistant?.name ? (
               <Loader1 size="17" />
@@ -763,13 +781,13 @@ export const AppSidebar = memo(
         {/* This is the second sidebar */}
         {/* We disable collapsible and let it fill remaining space */}
         <Sidebar collapsible="none" className="hidden flex-1 md:flex z-50">
-          <SidebarHeader className="gap-3.5 border-b p-4 py-[18px] ">
+          <SidebarHeader className="gap-3.5 border-b p-4 py-[18px]">
             <div className="flex w-full items-center justify-between">
               <div className="text-base font-medium text-foreground">
                 {activeItem}
               </div>
               {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
-              <SidebarInput className="w-2/3" placeholder="Search Anything" />
+              <SidebarInput className="w-3/5" placeholder="Search Anything" />
             </div>
           </SidebarHeader>
           <SidebarContent>

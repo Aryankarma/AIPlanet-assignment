@@ -41,8 +41,9 @@ async def update_primary_assistant(email: str, assistantName: str) -> bool:
             logging.error(f"No matching user found for email: {email}")
             return False
 
+        # Return True if at least one document matched, even if no fields were changed.
         logging.info(f"Updated primary assistant: {result.modified_count}")
-        return result.modified_count > 0
+        return result.matched_count > 0
 
     except Exception as e:
         logging.error(f"Error updating primary assistant: {str(e)}")

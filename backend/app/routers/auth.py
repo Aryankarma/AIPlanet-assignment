@@ -183,7 +183,7 @@ async def login(email: str = Form(...), password: str = Form(...)):
 
     # check email verification
     if not db_user["verified"]:
-        raise HTTPException(status_code=403, detail="Email not verified")
+        raise HTTPException(status_code=403, detail="Access denied: Your email is not verified. Please verify your email to proceed.")
         
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.email, "type": "access"}, expires_delta=access_token_expires)
@@ -300,4 +300,3 @@ def serialize_user(user) -> dict:
         "name": user["name"],
         "email": user["email"],
     }
-

@@ -1,6 +1,7 @@
 import os
 import io
 import uuid
+import json
 import logging
 import tempfile
 from pinecone import Pinecone
@@ -17,6 +18,8 @@ from ..utils.helpers import update_primary_assistant, get_primary_assistant
 from starlette.requests import Request
 from pydantic import BaseModel
 from jose import JWTError, jwt
+from sse_starlette.sse import EventSourceResponse
+
 
 router = APIRouter()
 
@@ -114,12 +117,12 @@ async def create_assistant(
 ) -> JSONResponse:
 
     get_or_create_assistant(assistantName, user_email)
-    return JSONResponse(content={"message": f"Assistant '{assistantName}' created successfully."})
+    return JSONResponse(content={"message": f"Assistant '{assistantName}' created successfully.", "status": 200})
 
 
 @router.post("/updatePrimaryAssistant")
 async def update_primary_assistant_route(
-    assistantName: str = Form(...),  
+    assistantName: str = Form(...),
     user_email: str = Depends(get_current_user)
 ) -> JSONResponse:
     """Securely updates the primary assistant for a user"""
@@ -162,29 +165,80 @@ async def save_pdf(file: UploadFile = File(...), user_email: str = Depends(get_c
         return {"message": f"PDF '{file.filename}' uploaded successfully.", "response": response_dict}
 
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {str(e).strip()}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @router.post("/ask_question")
-async def ask_question(message: str = Form(...), user_email: str = Depends(get_current_user)):
+async def ask_question(message: str = Form(...), chat_history: str = Form(default="[]"), user_email: str = Depends(get_current_user)):
     """Handles user questions and sends them to the Pinecone assistant."""
     
     try:
         assistant_name = await get_primary_assistant(user_email)
         assistant = get_or_create_assistant(assistant_name, user_email)
         
+        # Parse chat history from JSON string
+        history = json.loads(chat_history)
+
         print(assistant_name)
         print(assistant)
+        print("loading history: ")
+        # print(history)
 
-        msg = Message(content=message)
-        response = assistant.chat(messages=[msg])
+        # Convert history to Message objects
+        chat_messages = []
+        for msg in history:
+            # print(msg)
+            role = "user" if msg.get("sender") == "user" else "assistant"
+            chat_messages.append(Message(content=msg["text"], role=role))
+
+        # add the current message
+        chat_messages.append(Message(content=message, role="user"))
+
+        print('chat messages: ', chat_messages)
+
+        # msg = Message(content=message)
+        response = assistant.chat(messages=chat_messages)
             
         return {"message": str(response.message.content)}
     
     except Exception as e:
         logging.error(f"Error while processing question: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
+
+
+@router.get("/stream_question")  # Use GET for SSE (Form not needed in SSE, data goes as query param)
+async def stream_question(message: str, user_email: str = Depends(get_current_user)):
+    """Stream response for a user question."""
+
+    try:
+        assistant_name = await get_primary_assistant(user_email)
+        assistant = get_or_create_assistant(assistant_name, user_email)
+
+        msg = Message(role="user", content=message)
+        response = assistant.chat(messages=[msg], stream=True)  # Streaming response from Pinecone
+
+        async def event_generator():
+            try:
+                for chunk in response:
+                    if chunk and chunk.message and chunk.message.content:
+                        yield {
+                            "event": "message",
+                            "data": chunk.message.content
+                        }
+            except Exception as stream_error:
+                logging.error(f"Streaming error: {str(stream_error)}")
+                yield {
+                    "event": "error",
+                    "data": f"Streaming error: {str(stream_error)}"
+                }
+
+        return EventSourceResponse(event_generator())
+
+    except Exception as e:
+        logging.error(f"Error while processing question: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while processing question: {str(e)}")
+
 
 
 #  helper function to properly send the documents data to the frontend
@@ -259,12 +313,17 @@ async def delete_document(docID: str = Form(...), assistantName:str = Form(...),
 
 
 @router.post("/deleteAssistant")
-async def getAssistants(assistantName: str = Form(...)) -> JSONResponse:
+async def getAssistants(assistantName: str = Form(...), user_email: str = Depends(get_current_user)) -> JSONResponse:
     """Deletes an assistant"""
     try:
         print(f"deleting assistant: {assistantName}")
+
+        # Sanitize and format assistant name -> changes in a format -> aryankarma29---ass1
+        sanitized_email = user_email.replace("@gmail.com", "")
+        full_assistant_name = f"{sanitized_email}---{assistantName}".lower()
+
         deletedAssistantResponse = pc.assistant.delete_assistant(
-            assistant_name=assistantName, 
+            assistant_name=full_assistant_name, 
         )
         print("Successfully deleted assistant, response: ", deletedAssistantResponse)
         serialized_Response = safe_serialize(deletedAssistantResponse)
@@ -273,7 +332,7 @@ async def getAssistants(assistantName: str = Form(...)) -> JSONResponse:
     
     except Exception as e:
         logging.error(f"Error while deleting assistant: {assistantName}, error :, {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error while deleting assistant: {assistantName}")
+        raise HTTPException(status_code=500, detail=f"Error while deleting assistant: {assistantName}, error: {str(e)}")
 
 
 

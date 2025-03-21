@@ -50,6 +50,7 @@ export function NavUser({
     } catch (error) {
       throw error;
     } finally {
+      localStorage.setItem("primaryAssistant", "default") // reset primary assistant to default
       nProgress.done();
       window.location.reload();
     }
