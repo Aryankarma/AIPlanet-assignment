@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import myAxios from "@/lib/axios";
 import nProgress from "nprogress";
 import { toast } from "sonner";
+import { Item } from "@radix-ui/react-dropdown-menu";
 
 // Types
 interface FileObject {
@@ -28,6 +29,7 @@ interface AssistantObject {
 interface PersistedState {
   primaryAssistant: string;
   activeItem: string;
+  sidebarOpen: boolean;
 }
 
 // Interface for non-persisted state
@@ -45,21 +47,24 @@ interface NonPersistedState {
 
 // Combined state interface
 interface SidebarState extends PersistedState, NonPersistedState {
+  setPrimaryAssistant: (item: string) => void;
+  setSidebarOpen: (item: boolean) => void;
   setActiveItem: (item: string) => void;
   updatePrimaryAssistant: (assistantName: string) => Promise<void>;
   fetchDocs: () => Promise<void>;
+  logout: () => Promise<boolean>;
   fetchAssistants: () => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
   deleteAssistant: (assistantName: string) => Promise<void>;
 }
 
 // Create the persisted part of the store
-const createPersistedStore = (initialState: PersistedState) => 
+const createPersistedStore = (initialState: PersistedState) =>
   persist<SidebarState, [], [], PersistedState>(
     (set, get) => ({
       // Persisted state
       ...initialState,
-      
+
       // Non-persisted state (will be initialized on each app load)
       docs: [],
       assistants: [],
@@ -70,10 +75,21 @@ const createPersistedStore = (initialState: PersistedState) =>
       sidebarError: null,
       deletedDocs: [],
       deletedAssistants: [],
+
       
-      // Actions
+      // update activeItem in localstorage from any other part of the application
       setActiveItem: (item) => {
         set({ activeItem: item });
+      },
+
+      // update primaryAssistant in localstorage from any other part of the application
+      setPrimaryAssistant : (item) => {
+        set({ primaryAssistant: item });
+      },
+
+      // update primaryAssistant in localstorage from any other part of the application
+      setSidebarOpen : (item) => {
+        set({ sidebarOpen: item });
       },
 
       updatePrimaryAssistant: async (assistantName) => {
@@ -85,7 +101,10 @@ const createPersistedStore = (initialState: PersistedState) =>
           const response: any = await myAxios.post(
             "http://localhost:8000/updatePrimaryAssistant",
             formData,
-            { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
+            {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            }
           );
 
           if (response?.data?.success) {
@@ -99,6 +118,23 @@ const createPersistedStore = (initialState: PersistedState) =>
         }
       },
 
+      logout: async () => {
+        try {
+          nProgress.start();
+          await myAxios.post("http://localhost:8000/auth/logout");
+          // navigate("/")
+          return true;
+        } catch (error) {
+          console.log(error);
+          return false;
+        } finally {
+          set({ primaryAssistant: "default" }); // reset primary assistant to default
+          // maybe try updating the primary assistant default to the db also
+          nProgress.done();
+          window.location.reload();
+        }
+      },
+
       fetchDocs: async () => {
         set({ docsLoading: true, sidebarError: null });
         nProgress.start();
@@ -109,7 +145,10 @@ const createPersistedStore = (initialState: PersistedState) =>
           const response: any = await myAxios.post(
             "http://localhost:8000/fetchDocs",
             formData,
-            { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
+            {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            }
           );
 
           if (response?.data?.files) {
@@ -131,7 +170,10 @@ const createPersistedStore = (initialState: PersistedState) =>
           const response: any = await myAxios.post(
             "http://localhost:8000/getAssistants",
             new FormData(),
-            { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
+            {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            }
           );
 
           if (response?.data?.assistants) {
@@ -157,16 +199,19 @@ const createPersistedStore = (initialState: PersistedState) =>
           const response: any = await myAxios.post(
             "http://localhost:8000/deleteDoc",
             formData,
-            { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
+            {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            }
           );
 
           if (response.status === 200) {
             toast("Document deleted successfully.");
-            set((state) => ({ 
-              deletedDocs: [...state.deletedDocs, id], 
+            set((state) => ({
+              deletedDocs: [...state.deletedDocs, id],
               deletingDocID: null,
               // Remove the deleted document from the docs array to trigger a re-render
-              docs: state.docs.filter(doc => doc.id !== id)
+              docs: state.docs.filter((doc) => doc.id !== id),
             }));
           }
         } catch (error) {
@@ -183,24 +228,31 @@ const createPersistedStore = (initialState: PersistedState) =>
           const formData = new FormData();
           formData.append("assistantName", assistantName);
 
-          toast(`Deleting assistant ${assistantName}.`)
+          toast(`Deleting assistant ${assistantName}.`);
           const response: any = await myAxios.post(
             "http://localhost:8000/deleteAssistant",
             formData,
-            { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
+            {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            }
           );
 
           if (response.status === 200) {
             toast("Assistant deleted successfully.");
-            set((state) => ({ 
-              deletedAssistants: [...state.deletedAssistants, assistantName], 
+            set((state) => ({
+              deletedAssistants: [...state.deletedAssistants, assistantName],
               deletingAssistantID: null,
               // Remove the deleted assistant from the assistants array to trigger a re-render
-              assistants: state.assistants.filter(assistant => assistant.name !== assistantName)
+              assistants: state.assistants.filter(
+                (assistant) => assistant.name !== assistantName
+              ),
             }));
-            get().deletedAssistants.includes(get().primaryAssistant) ? get().updatePrimaryAssistant("default") : null
+            get().deletedAssistants.includes(get().primaryAssistant)
+              ? get().updatePrimaryAssistant("default")
+              : null;
           }
-          await get().fetchAssistants() // fetching assistants for better consistency
+          await get().fetchAssistants(); // fetching assistants for better consistency
         } catch (error) {
           console.error("Error deleting assistant:", error);
         } finally {
@@ -214,6 +266,7 @@ const createPersistedStore = (initialState: PersistedState) =>
       partialize: (state) => ({
         primaryAssistant: state.primaryAssistant,
         activeItem: state.activeItem,
+        sidebarOpen: state.sidebarOpen
       }),
       storage: createJSONStorage(() => localStorage),
     }
@@ -222,7 +275,12 @@ const createPersistedStore = (initialState: PersistedState) =>
 // Initialize the store with default values
 export const useSidebarStore = create(
   createPersistedStore({
-    primaryAssistant: localStorage.getItem("primaryAssistant") || "default",
-    activeItem: localStorage.getItem("activeItem") || "Docs",
+    primaryAssistant: "default",
+    activeItem: "Docs",
+    sidebarOpen: true
   })
 );
+
+function getState() {
+  throw new Error("Function not implemented.");
+}

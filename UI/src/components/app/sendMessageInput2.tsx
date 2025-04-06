@@ -20,12 +20,12 @@ interface Message {
 
 interface sendMessageInputProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
-  isSidebarOpen: boolean;
+  sidebarOpen: boolean;
 }
 
 const SendMessageInput2: React.FC<sendMessageInputProps> = ({
   setMessages,
-  isSidebarOpen,
+  sidebarOpen,
 }) => {
   const [inputText, setInputText] = useState("");
   const [isEnterPressed, setIsEnterPressed] = useState(false);
@@ -123,7 +123,7 @@ const SendMessageInput2: React.FC<sendMessageInputProps> = ({
     <div
       className={`py-3 fixed bottom-0 transition-all duration-300 mx-auto flex`}
       style={{
-        width: isSidebarOpen ? "calc(100% - 350px)" : "96%",
+        width: sidebarOpen ? "calc(100% - 350px)" : "96%",
       }}
     >
       <div className="relative w-full">

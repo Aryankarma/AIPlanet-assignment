@@ -20,7 +20,6 @@ from pydantic import BaseModel
 from jose import JWTError, jwt
 from sse_starlette.sse import EventSourceResponse
 
-
 router = APIRouter()
 
 load_dotenv()
@@ -268,6 +267,13 @@ async def fetch_documents(assistantName: str = Form(...), user_email: str = Depe
     """Fetches documents uploaded to the given assistant."""
     try:
 
+        # Remove surrounding quotes if present
+        if assistantName.startswith('"') and assistantName.endswith('"'):
+            assistantName = assistantName[1:-1]
+        elif assistantName.startswith("'") and assistantName.endswith("'"):
+            assistantName = assistantName[1:-1]
+
+
         assistant = get_or_create_assistant(assistantName, user_email)
 
         # Initialize the assistant instance
@@ -276,7 +282,7 @@ async def fetch_documents(assistantName: str = Form(...), user_email: str = Depe
         # Fetch files and debug their structure
         files = assistant.list_files()
         # print(f"Raw files fetched: {files}")
-        logging.info(f"Raw files fetched: {files}")
+        print("Fetching docs")
         
         # Safely serialize files
         serialized_files = safe_serialize(files)

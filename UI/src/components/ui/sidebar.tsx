@@ -159,7 +159,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
-    setIsSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
+    setSidebarOpen?: (item: boolean) => void;
   }
 >(
   (
@@ -169,7 +169,7 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
-      setIsSidebarOpen, 
+      setSidebarOpen, 
       ...props
     },
     ref

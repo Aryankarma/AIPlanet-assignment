@@ -78,7 +78,7 @@ async def register(user: User, background_tasks: BackgroundTasks):
 
     # create user with hashed password and insert into db
     hashed_password = hash_password(user.password)
-    await users_collection.insert_one({"name": user.name, "email": user.email, "password": hashed_password, "verified": False, "created_at": datetime.now(timezone.utc)})
+    await users_collection.insert_one({"name": user.name, "email": user.email, "password": hashed_password, "verified": False, "pineconeConnect": False, "created_at": datetime.now(timezone.utc)})
 
     # generating & sending verification url through token
     # verification_token = create_access_token({"email": user.email}, timedelta(hours=1)) # old this was
@@ -216,6 +216,7 @@ async def login(email: str = Form(...), password: str = Form(...)):
     return response
 
 
+# Get all users
 @router.get("/users", response_model=List[dict])
 async def list_users():
     """Retrieve all users from the database."""
@@ -292,7 +293,7 @@ async def create_verification_token(email: str, verification_tokens: AsyncIOMoto
     })
 
     return token
-
+    
 def serialize_user(user) -> dict:
     """Convert MongoDB user document to a Python dictionary."""
     return {

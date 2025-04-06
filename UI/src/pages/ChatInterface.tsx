@@ -56,22 +56,23 @@ interface Message {
 }
 
 const ChatInterface = () => {
+  const { fetchAssistants, fetchDocs, primaryAssistant, sidebarOpen, setSidebarOpen } = useSidebarStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false); // Control popover state
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
-    JSON.parse(localStorage.getItem("sidebarOpen") || "false")
-  );
-  const { fetchAssistants, fetchDocs } = useSidebarStore();
+  
+  // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+  //   sidebarOpen
+  // );
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const theme = useTheme().theme;
 
   useEffect(() => {
-    localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
-  }, [isSidebarOpen]);
+    localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
+  }, [sidebarOpen]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -101,7 +102,7 @@ const ChatInterface = () => {
       return;
     }
 
-    const assistantName = localStorage.getItem("primaryAssistant");
+    const assistantName = primaryAssistant
 
     try {
       toast("Uploading document...");
@@ -186,9 +187,9 @@ const ChatInterface = () => {
             "--sidebar-width": "350px",
           } as React.CSSProperties
         }
-        open={isSidebarOpen}
+        open={sidebarOpen}
       >
-        <AppSidebar setIsSidebarOpen={setIsSidebarOpen} />
+        <AppSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         <SidebarInset>
           <div className="flex flex-col h-screen">
@@ -396,7 +397,7 @@ const ChatInterface = () => {
             <SendMessageInput
               setMessages={setMessages}
               messages={messages}
-              isSidebarOpen={isSidebarOpen}
+              sidebarOpen={sidebarOpen}
             />
           </div>
         </SidebarInset>

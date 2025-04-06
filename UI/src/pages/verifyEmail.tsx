@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
 import nProgress from "nprogress";
 import myAxios from "@/lib/axios";
+import { useSidebarStore } from "@/stores/useSidebarStore";
 
 export default function VerifyEmail() {
+  const {setPrimaryAssistant} = useSidebarStore()
   const [verificationStatus, setVerificationStatus] = useState<
     "loading" | "success" | "error"
   >("loading");
@@ -49,7 +51,8 @@ export default function VerifyEmail() {
       console.log("This is misbehaving here, not forwarding to /chat once the email is successfully verified, check properly.")
       // alert("Email verified successfully, sending u to /chat");
       setTimeout(() => {
-        localStorage.setItem("primaryAssistant", "default"); // resets the primary assistant to default
+        setPrimaryAssistant("default"); // set the primary assistant to default
+        // localStorage.setItem("primaryAssistant", "default"); // resets the primary assistant to default
         localStorage.setItem("sidebarOpen", "false"); // reset sidebar open value to false
         navigate("/chat");
       }, 3000);

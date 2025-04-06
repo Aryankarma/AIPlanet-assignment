@@ -38,6 +38,7 @@ import myAxios from "@/lib/axios";
 import { toast } from "sonner";
 import { c } from "framer-motion/dist/types.d-6pKw1mTI";
 import { useSidebarStore } from "@/stores/useSidebarStore";
+import { set } from "zod/lib";
 
 const data = {
   user: {
@@ -241,10 +242,12 @@ interface AssistantResponseData {
 
 export const AppSidebar = memo(
   ({
-    setIsSidebarOpen,
+    setSidebarOpen,
+    sidebarOpen,
     ...props
   }: React.ComponentProps<typeof Sidebar> & {
-    setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setSidebarOpen: (item: boolean) => void,
+    sidebarOpen: boolean
   }) => {
     const isFirstRender = useRef(true);
     // const [docs, setDocs] = useState<Object>({})
@@ -280,6 +283,7 @@ export const AppSidebar = memo(
       sidebarError,
 
       setActiveItem,
+      setPrimaryAssistant,
       updatePrimaryAssistant,
       fetchDocs,
       fetchAssistants,
@@ -295,8 +299,9 @@ export const AppSidebar = memo(
       // }
 
       // Actual update logic only when primaryAssistant changes after first mount
-      localStorage.setItem("primaryAssistant", primaryAssistant);
-      updatePrimaryAssistant(primaryAssistant);
+      // localStorage.setItem("primaryAssistant", primaryAssistant);
+      setPrimaryAssistant(primaryAssistant)
+      updatePrimaryAssistant(primaryAssistant)
       fetchDocs();
     }, [primaryAssistant]);
 
@@ -305,196 +310,17 @@ export const AppSidebar = memo(
     }, [primaryAssistant]);
 
     useEffect(() => {
-      localStorage.setItem("activeItem", activeItem);
+      // localStorage.setItem("activeItem", activeItem);
+      setActiveItem(activeItem)
     }, [activeItem]);
 
     useEffect(() => {
-      fetchDocs();
-    }, [primaryAssistant]);
-
-    useEffect(() => {
-      fetchDocs();
+      // as we are already fetching it in primaryAssistant useEffect
+      // fetchDocs();
       fetchAssistants();
     }, []);
 
     const { setOpen } = useSidebar();
-
-    // const updatePrimaryAssistant = async (assistantName: string) => {
-    //   nProgress.start()
-
-    //   const formData = new FormData()
-    //   formData.append("assistantName", assistantName)
-
-    //   try {
-    //     const response: any = await myAxios.post(
-    //       "http://localhost:8000/updatePrimaryAssistant",
-    //       formData,
-    //       {
-    //         withCredentials: true,
-    //         headers: { "Content-Type": "multipart/form-data" },
-    //       }
-    //     )
-
-    //     console.log("Primary assistant update response:", response)
-
-    //     if (response?.data?.success) {
-    //       setPrimaryAssistant(assistantName)
-    //       localStorage.setItem("primaryAssistant", assistantName)
-    //       toast(`Primary Assistant updated to: ${assistantName}`)
-    //     }
-
-    //     return response.data;
-    //   } catch (err) {
-    //     console.error(err)
-    //     return null;
-    //   } finally {
-    //     nProgress.done()
-    //   }
-    // };
-
-    // const fetchDocs = async () => {
-    //   setDocsLoading(true)
-    //   nProgress.start()
-    //   setSidebarError(null)
-
-    //   const formData = new FormData()
-    //   formData.append("assistantName", primaryAssistant)
-
-    //   try {
-    //     const response: { data: DocsResponseData } = await myAxios.post(
-    //       "http://localhost:8000/fetchDocs",
-    //       formData,
-    //       {
-    //         withCredentials: true,
-    //         headers: { "Content-Type": "multipart/form-data" },
-    //       }
-    //     )
-    //     console.log("documents ", response)
-    //     if (response?.data?.files) {
-    //       setDocs(response.data.files)
-    //     }
-    //   } catch (err) {
-    //     setSidebarError("Failed to fetch documents")
-    //     console.error(err)
-    //   } finally {
-    //     nProgress.done()
-    //     setDocsLoading(false)
-    //   }
-    // };
-
-    // // send username in params when auth gets setup
-    // const fetchAssistants = async () => {
-    //   setSidebarLoading(true)
-    //   setSidebarError(null)
-
-    //   const formData = new FormData()
-    //   formData.append("dummy", "dummy") // you can remove this if backend expects nothing
-
-    //   try {
-    //     nProgress.start()
-    //     const response: { data: AssistantResponseData } = await myAxios.post(
-    //       "http://localhost:8000/getAssistants",
-    //       formData,
-    //       {
-    //         withCredentials: true,
-    //         headers: { "Content-Type": "multipart/form-data" },
-    //       }
-    //     )
-    //     console.log("assistants available : ", response.data.assistants)
-    //     if (response?.data?.assistants) {
-    //       setAssistants(response.data.assistants)
-    //     }
-    //   } catch (err) {
-    //     setSidebarError("Failed to fetch documents")
-    //     console.error(err)
-    //   } finally {
-    //     nProgress.done()
-    //     setSidebarLoading(false)
-    //   }
-    // };
-
-    // const deleteDocument = async (id: string) => {
-    //   console.log("DataStore from fronyend: ", id)
-
-    //   try {
-    //     if (!id) {
-    //       console.error("No id provided!")
-    //       return;
-    //     }
-
-    //     // console.log("id from frontend:", id)
-
-    //     // // Safely convert to valid JSON string
-    //     // const validJsonString = id
-    //     //   .replace(/'/g, '"')
-    //     //   .replace(/\bNone\b/g, 'null')
-
-    //     // const parsedObject: { id: string } = JSON.parse(validJsonString)
-
-    //     console.log("Extracted ID:", id)
-
-    //     nProgress.start()
-    //     setDeletingDocID(id)
-    //     const formData = new FormData()
-    //     formData.append("docID", id)
-    //     formData.append("assistantName", primaryAssistant)
-
-    //     const response = await myAxios.post(
-    //       "http://localhost:8000/deleteDoc",
-    //       formData,
-    //       {
-    //         withCredentials: true,
-    //         headers: { "Content-Type": "multipart/form-data" },
-    //       }
-    //     )
-
-    //     if (response.status === 200) {
-    //       // add a successfully deleted doc toast here
-    //       toast("Document deleted successfully.")
-    //       // fetchDocs()
-    //       setDeletedDocs((prev) => [...prev, id])
-    //       setDeletingDocID(null)
-    //     }
-    //   } catch (error) {
-    //     console.error("error : ", error)
-    //   } finally {
-    //     nProgress.done()
-    //   }
-    // };
-
-    // // check this out, and rewrite (this one is not perfect)
-    // const deleteAssistant = async (assistantName: string) => {
-    //   console.log("DataStore from fronyend: ", assistantName)
-
-    //   try {
-    //     nProgress.start()
-    //     setDeletingAssistantID(assistantName)
-    //     const formData = new FormData()
-    //     formData.append("assistantName", assistantName)
-
-    //     const response = await myAxios.post(
-    //       "http://localhost:8000/deleteAssistant",
-    //       formData,
-    //       {
-    //         withCredentials: true,
-    //         headers: { "Content-Type": "multipart/form-data" },
-    //       }
-    //     )
-
-    //     if (response.status === 200) {
-    //       // add a successfully deleted assistant toast here
-    //       toast("Assistant deleted successfully.")
-    //       // fetchDocs()
-    //       setDeletedAssistants((prev) => [...prev, assistantName])
-    //       setDeletingAssistantID(null)
-    //       updatePrimaryAssistant("default")
-    //     }
-    //   } catch (error) {
-    //     console.error("error : ", error)
-    //   } finally {
-    //     nProgress.done()
-    //   }
-    // };
 
     const renderDocs = () => {
       if (docsLoading) {
@@ -537,7 +363,7 @@ export const AppSidebar = memo(
               key={doc.created_on}
               className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
             >
-              {doc.name.slice(0, 28) + "..."}
+              {doc.name.slice(0, 28) + ((doc.name.length > 20) ? "..." : "")}
             </span>
 
             <span className="text-xs font-light">
@@ -702,7 +528,7 @@ export const AppSidebar = memo(
       <Sidebar
         collapsible="icon"
         className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row select-none z-50"
-        setIsSidebarOpen={setIsSidebarOpen}
+        setSidebarOpen={setSidebarOpen}
         {...props}
       >
         {/* This is the first sidebar */}
@@ -735,7 +561,7 @@ export const AppSidebar = memo(
                 </a> */}
                   <SidebarTrigger
                     className="text-primary bg-transparent"
-                    onClick={() => setIsSidebarOpen((prev) => !prev)}
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
                   />
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -754,7 +580,7 @@ export const AppSidebar = memo(
                         }}
                         onClick={() => {
                           setActiveItem(item.title);
-                          setIsSidebarOpen(true);
+                          setSidebarOpen(true);
                           setOpen(true);
                         }}
                         isActive={activeItem === item.title}
@@ -772,8 +598,8 @@ export const AppSidebar = memo(
           <SidebarFooter>
             <SidebarTrigger
               className="text-primary bg-transparent invisible"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-            />
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              />
             <NavUser user={data.user} />
           </SidebarFooter>
         </Sidebar>

@@ -28,13 +28,13 @@ interface Message {
 interface sendMessageInputProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   messages: Message[];
-  isSidebarOpen: boolean;
+  sidebarOpen: boolean;
 }
 
 const SendMessageInput: React.FC<sendMessageInputProps> = ({
   setMessages,
   messages,
-  isSidebarOpen,
+  sidebarOpen,
 }) => {
   const [inputText, setInputText] = useState("");
   const [isEnterPressed, setIsEnterPressed] = useState(false);
@@ -86,7 +86,7 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
       // Only include the last 10 messages in the history (3 2 way conversations, 3 q/a bw the user and ai)
       const recentChatHistory = chatHistory.slice(-10);
       formData.append("chat_history", JSON.stringify(recentChatHistory));
-      setInputText("");
+      setInputText("")
 
       const response = await myAxios.post<MessageApiResponse>(
         "http://localhost:8000/ask_question",
@@ -133,7 +133,7 @@ const SendMessageInput: React.FC<sendMessageInputProps> = ({
     <div
       className={`py-3 fixed bottom-0 transition-all duration-300 mx-auto flex`}
       style={{
-        width: isSidebarOpen ? "calc(100% - 350px)" : "96%",
+        width: sidebarOpen ? "calc(100% - 350px)" : "96%",
       }}
     >
       <div className="relative w-full">

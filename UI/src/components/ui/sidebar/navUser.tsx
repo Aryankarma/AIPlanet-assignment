@@ -28,6 +28,7 @@ import {
 import myAxios from "@/lib/axios";
 import nProgress from "nprogress";
 import { useNavigate } from "react-router-dom";
+import { useSidebarStore } from "@/stores/useSidebarStore";
 
 export function NavUser({
   user,
@@ -39,22 +40,13 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const navigate = useNavigate(); 
+  const logout = useSidebarStore(state => state.logout)
 
-  const navigate = useNavigate();
-
-  const logout = async () => {
-    try {
-      nProgress.start();
-      await myAxios.post("http://localhost:8000/auth/logout")
-      navigate("/");
-    } catch (error) {
-      throw error;
-    } finally {
-      localStorage.setItem("primaryAssistant", "default") // reset primary assistant to default
-      nProgress.done();
-      window.location.reload();
-    }
-  };
+  const handleLogout = async () => {
+    await logout()
+    navigate("/")
+  }
 
   return (
     <SidebarMenu>
@@ -117,7 +109,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>
