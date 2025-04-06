@@ -1,6 +1,6 @@
 import * as React from "react";
 import { memo } from "react";
-import { FileText, MessageCircle, UserIcon, Trash } from "lucide-react";
+import { FileText, MessageCircle, UserIcon, Bolt, Trash } from "lucide-react";
 import { NavUser } from "./navUser";
 import { Label } from "@/components/ui/label";
 import {
@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import { c } from "framer-motion/dist/types.d-6pKw1mTI";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { set } from "zod/lib";
+import { connectToPinecone } from '@pinecone-database/connect';
+
 
 const data = {
   user: {
@@ -63,6 +65,12 @@ const data = {
       title: "Chats",
       url: "#",
       icon: MessageCircle,
+      isActive: false,
+    },
+    {
+      title: "Settings",
+      url: "#",
+      icon: Bolt,
       isActive: false,
     },
   ],
@@ -322,6 +330,28 @@ export const AppSidebar = memo(
 
     const { setOpen } = useSidebar();
 
+    const renderSettings = () =>{
+      
+      // useEffect(() => {
+      //   const setupPinecone = (apiKey: string) => {
+      //     // Set up a Pinecone client using the API key
+      //     console.log('API Key:', apiKey);
+      //   };
+    
+      //   if (containerRef.current) {
+      //     connectToPinecone(setupPinecone, {
+      //       integrationId: 'aiplanet-app',
+      //       container: containerRef.current,
+      //     });
+      //   }
+      // }, []);
+      
+      return <>
+        <h5>Hey, this is settings</h5>
+        {/* <div className="w-1/2" ref={containerRef} id="connect-widget" /> */}
+      </>
+    }
+
     const renderDocs = () => {
       if (docsLoading) {
         return <Loader1 />;
@@ -519,10 +549,14 @@ export const AppSidebar = memo(
           return renderDocs();
         case "Assistants":
           return renderAssistants();
-        default:
+        case "Chats":
           return renderChats();
+        default: 
+          return renderSettings();
       }
     };
+
+    // const containerRef = useRef<HTMLDivElement>(null);
 
     return (
       <Sidebar
@@ -609,11 +643,11 @@ export const AppSidebar = memo(
         <Sidebar collapsible="none" className="hidden flex-1 md:flex z-50">
           <SidebarHeader className="gap-3.5 border-b p-4 py-[18px]">
             <div className="flex w-full items-center justify-between">
-              <div className="text-base font-medium text-foreground">
+              <div className="text-base h-8 font-medium text-foreground">
                 {activeItem}
               </div>
               {/* replace with shadcn command, open a popup and set command in it, 3 options (heading), top 3 assistant, top 3 chats, top 3 documents */}
-              <SidebarInput className="w-3/5" placeholder="Search Anything" />
+              {/* <SidebarInput className="w-3/5" placeholder="Search Anything" /> */}
             </div>
           </SidebarHeader>
           <SidebarContent>

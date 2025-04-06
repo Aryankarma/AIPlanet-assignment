@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, UserPlus } from "lucide-react";
+import { Upload, LogIn, UserPlus, ExternalLink } from "lucide-react";
 import { ModeToggle } from "@/components/ui/ThemeToggle";
 import {
   Tooltip,
@@ -36,9 +36,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import nProgress from "nprogress";
 import { useSidebarStore } from "@/stores/useSidebarStore";
+import { ConnectPopup, connectToPinecone } from "@pinecone-database/connect";
+import { Label } from "@/components/ui/label";
 
 const FormSchema = z.object({
   assistantName: z
@@ -56,12 +66,20 @@ interface Message {
 }
 
 const ChatInterface = () => {
-  const { fetchAssistants, fetchDocs, primaryAssistant, sidebarOpen, setSidebarOpen } = useSidebarStore();
+  const {
+    fetchAssistants,
+    fetchDocs,
+    primaryAssistant,
+    sidebarOpen,
+    setSidebarOpen,
+  } = useSidebarStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false); // Control popover state
-  
+  const [showDialog, setShowDialog] = useState(false);
+  const [pineconeKey, setPineconeKey] = useState("");
+
   // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
   //   sidebarOpen
   // );
@@ -69,10 +87,6 @@ const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const theme = useTheme().theme;
-
-  useEffect(() => {
-    localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
-  }, [sidebarOpen]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -102,7 +116,7 @@ const ChatInterface = () => {
       return;
     }
 
-    const assistantName = primaryAssistant
+    const assistantName = primaryAssistant;
 
     try {
       toast("Uploading document...");
@@ -126,7 +140,7 @@ const ChatInterface = () => {
         "An error occurred while saving the PDF. Check the console for details."
       );
     } finally {
-      handleRemoveFile()
+      handleRemoveFile();
       nProgress.done();
     }
   };
@@ -179,8 +193,74 @@ const ChatInterface = () => {
     }
   };
 
+  const connectWithAPIKey = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      ConnectPopup({
+        onConnect: (key) => {
+          resolve(key);
+        },
+        integrationId: "aiplanet-app",
+      }).open();
+    });
+  }, []);
+
+  const handleConnect = async () => {
+    try {
+      const apiKey = await connectWithAPIKey();
+      console.log("API Key:", apiKey);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleConfirm = () => {
+    console.log("User confirmed action.");
+    setShowDialog(false);
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      setShowDialog(true);
+    }, 3000);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen w-screen">
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Connect to Pinecone</DialogTitle>
+            <DialogDescription>
+              To complete the setup, this application requires a Pinecone API
+              key. A new tab will open where you can retrieve your key after
+              logging in. Paste it below to establish the connection.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-4 items-center gap-2 py-4">
+            <Label htmlFor="pinecone-key" className="text-left">
+              API Key
+            </Label>
+            <Input
+              id="pinecone-key"
+              placeholder="Paste your key"
+              className="col-span-4"
+              value={pineconeKey}
+              onChange={(e) => setPineconeKey(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="justify-between w-full flex">
+            <Button type="button" className="w-full gap-3" variant="outline" onClick={handleConnect}>
+            <ExternalLink /> Get API Key
+            </Button>
+            <Button type="submit" className="w-full gap-3" onClick={handleConnect}>
+            <LogIn /> Connect
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <SidebarProvider
         style={
           {
@@ -201,29 +281,6 @@ const ChatInterface = () => {
                   className="hidden h-10 w-full"
                 />
               </div>
-              {/* <input
-                placeholder="Full name"
-                value={name}
-                className="w-40"
-                onChange={(e) => setName(e.target.value)}
-                />
-              <input
-                placeholder="Password"
-                type="password"
-                className="w-40"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                />
-              <input
-                placeholder="email"
-                type="email"
-                className="w-40"
-                value={email}
-                onChange={(e) => setemail(e.target.value)}
-              /> */}
-              {/* <button onClick={handleLogin}>Login</button> */}
-              {/* <button onClick={loginUser}>Register</button> */}
-              {/* <Link to="/login">Go to login</Link> */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 {selectedFile ? (
                   <div className="flex items-center justify-between p-0 pl-2 rounded-md">
@@ -231,11 +288,8 @@ const ChatInterface = () => {
                       className="px-3 flex gap-4 text-primary w-full"
                       variant="outline"
                       size="icon"
-                      // onClick={handleRemoveFile}
                     >
-                      <p>
-                      Uploading {selectedFile.name.slice(0, 20)}...
-                      </p>
+                      <p>Uploading {selectedFile.name.slice(0, 20)}...</p>
                       {/* <X className="h-2 w-2" /> */}
                       <span className="sr-only">Remove file</span>
                     </Button>
@@ -354,7 +408,7 @@ const ChatInterface = () => {
             <main className="flex-1 overflow-y-auto mt-[72px] mb-[80px] p-4">
               <div className="mx-auto max-w-[800px] space-y-6">
                 {messages.length === 0 && (
-                  <div className="flex items-end justify-center h-64">
+                  <div className="flex items-end justify-center h-8">
                     <p className="text-primary/15 select-none text-2xl font-semibold">
                       Ask anything on your information — get instant, AI-powered
                       answers.

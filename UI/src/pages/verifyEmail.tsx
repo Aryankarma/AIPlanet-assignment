@@ -10,7 +10,7 @@ import myAxios from "@/lib/axios";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 
 export default function VerifyEmail() {
-  const {setPrimaryAssistant} = useSidebarStore()
+  const {setPrimaryAssistant, setSidebarOpen} = useSidebarStore()
   const [verificationStatus, setVerificationStatus] = useState<
     "loading" | "success" | "error"
   >("loading");
@@ -53,7 +53,8 @@ export default function VerifyEmail() {
       setTimeout(() => {
         setPrimaryAssistant("default"); // set the primary assistant to default
         // localStorage.setItem("primaryAssistant", "default"); // resets the primary assistant to default
-        localStorage.setItem("sidebarOpen", "false"); // reset sidebar open value to false
+        setSidebarOpen(true) // reset sidebar open value to true
+        // localStorage.setItem("sidebarOpen", "false"); 
         navigate("/chat");
       }, 3000);
     } catch (error: any) {
