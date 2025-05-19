@@ -183,7 +183,35 @@ async def create_assistant(
     return JSONResponse(content={"message": f"Assistant '{assistantName}' created successfully.", "status": 200})
 
 
-@router.post("/add-pinecone")
+@router.get("/checkPineconeConnectStatus")
+async def checkPineconeConnectStatus(user_email: str = Depends(get_current_user)) -> JSONResponse:
+    """check if pinecone api is connected or not also sends the api key"""
+
+    try:
+        # Get the user's encrypted API key from the database
+        user_data = await users_collection.find_one({"email": user_email})
+
+        if not user_data or "pineconeConnect" not in user_data:
+            logger.warning(f"No Pinecone connection status found for user: {user_email}")
+            raise ValueError("No Pinecone connection status found. Please add your API key first.")
+
+        decryptedApiKey = user_data["pinecone_apiKey"] = decrypt_api_key(user_data["pinecone_apiKey"])
+
+        # Check if the Pinecone connection is established
+        pinecone_connect_status = user_data["pineconeConnect"]
+
+        return JSONResponse(content={
+            "success": True,
+            "message": "Pinecone connection status retrieved successfully.",
+            "apiKey": decryptedApiKey,
+            "status": pinecone_connect_status
+        })
+    except Exception as e:
+        logger.error(f"Error checking Pinecone connection status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to check Pinecone connection status")
+
+
+@router.post("/add_pinecone")
 async def savePineconeApiKey(
     apiKey: str = Form(...),
     user_email: str = Depends(get_current_user)
@@ -198,7 +226,7 @@ async def savePineconeApiKey(
         # Save the API key in the database
         success = await users_collection.update_one(
             {"email": user_email},
-            {"$set": {"pinecone_apiKey": encrypted_api_key}}
+            {"$set": {"pinecone_apiKey": encrypted_api_key, "pineconeConnect": True}}
         )
 
         print("success:", success)
@@ -220,7 +248,7 @@ async def savePineconeApiKey(
             # If the key doesn't work, remove it from the database
             await users_collection.update_one(
                 {"email": user_email},
-                {"$unset": {"pinecone_apiKey": ""}}
+                {"$unset": {"pinecone_apiKey": "", "pineconeConnect" : False}}
             )
             
             return JSONResponse(content={

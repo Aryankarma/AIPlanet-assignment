@@ -9,6 +9,8 @@ import { toast } from "sonner";
 interface PineconeAPIkey {
   apiKey: string;
   setApiKey: (key: string) => void;
+  pineconeStatus: boolean;
+  setPineconeStatus: (status: boolean) => void;
 }
 
 interface FileObject {
@@ -66,6 +68,8 @@ interface SidebarState extends PersistedState, NonPersistedState {
 export const usePineconeKeyStore = create<PineconeAPIkey>((set) => ({
   apiKey: "",
   setApiKey: (key) => set({ apiKey: key }),
+  pineconeStatus: false,
+  setPineconeStatus: (status) => set({ pineconeStatus: status }),
 }))
 
 // Create the persisted part of the store

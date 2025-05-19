@@ -37,10 +37,11 @@ import nProgress from "nprogress";
 import myAxios from "@/lib/axios";
 import { toast } from "sonner";
 import { c } from "framer-motion/dist/types.d-6pKw1mTI";
-import { useSidebarStore } from "@/stores/useSidebarStore";
+import { useSidebarStore, usePineconeKeyStore } from "@/stores/useSidebarStore";
 import { set } from "zod/lib";
-import { connectToPinecone } from '@pinecone-database/connect';
-
+import { connectToPinecone } from "@pinecone-database/connect";
+import { Input } from "../input";
+import { Card, CardContent } from "../card";
 
 const data = {
   user: {
@@ -254,8 +255,8 @@ export const AppSidebar = memo(
     sidebarOpen,
     ...props
   }: React.ComponentProps<typeof Sidebar> & {
-    setSidebarOpen: (item: boolean) => void,
-    sidebarOpen: boolean
+    setSidebarOpen: (item: boolean) => void;
+    sidebarOpen: boolean;
   }) => {
     const isFirstRender = useRef(true);
     // const [docs, setDocs] = useState<Object>({})
@@ -308,8 +309,8 @@ export const AppSidebar = memo(
 
       // Actual update logic only when primaryAssistant changes after first mount
       // localStorage.setItem("primaryAssistant", primaryAssistant);
-      setPrimaryAssistant(primaryAssistant)
-      updatePrimaryAssistant(primaryAssistant)
+      setPrimaryAssistant(primaryAssistant);
+      updatePrimaryAssistant(primaryAssistant);
       fetchDocs();
     }, [primaryAssistant]);
 
@@ -319,7 +320,7 @@ export const AppSidebar = memo(
 
     useEffect(() => {
       // localStorage.setItem("activeItem", activeItem);
-      setActiveItem(activeItem)
+      setActiveItem(activeItem);
     }, [activeItem]);
 
     useEffect(() => {
@@ -330,29 +331,85 @@ export const AppSidebar = memo(
 
     const { setOpen } = useSidebar();
 
-    const renderSettings = () =>{
-      
-      // useEffect(() => {
-      //   const setupPinecone = (apiKey: string) => {
-      //     // Set up a Pinecone client using the API key
-      //     console.log('API Key:', apiKey);
-      //   };
-    
-      //   if (containerRef.current) {
-      //     connectToPinecone(setupPinecone, {
-      //       integrationId: 'aiplanet-app',
-      //       container: containerRef.current,
-      //     });
-      //   }
-      // }, []);
-      
-      return <>
-        <h5>Hey, this is settings</h5>
-        {/* <div className="w-1/2" ref={containerRef} id="connect-widget" /> */}
-      </>
-    }
+    const RenderSettings = () => {
+      const { apiKey, setApiKey, setPineconeStatus, pineconeStatus } =
+        usePineconeKeyStore();
+      const [loading, setLoading] = useState(false);
+      const [newKey, setNewKey] = useState(apiKey);
 
-    const renderDocs = () => {
+      useEffect(() => {
+        const checkPinecone = async () => {
+          try {
+            const response: any = await myAxios.get(
+              "http://localhost:8000/checkPineconeConnectStatus",
+              { withCredentials: true }
+            );
+            console.log("Response from Pinecone check: ", response.data);
+            response.data.success
+              ? (setPineconeStatus(true), setApiKey(response.data.apiKey))
+              : setPineconeStatus(false);
+          } catch (error) {
+            console.error("Failed to check Pinecone status:", error);
+            setPineconeStatus(false);
+          }
+        };
+
+        checkPinecone();
+      }, []);
+
+      const handleUpdateKey = async () => {
+        try {
+          setLoading(true);
+          const response: any = await myAxios.post(
+            "http://localhost:8000/updatePineconeKey",
+            { apiKey: newKey },
+            { withCredentials: true }
+          );
+          if (response.data.success) {
+            setApiKey(newKey);
+            setPineconeStatus(true);
+          } else {
+            setPineconeStatus(false);
+          }
+        } catch (error) {
+          console.error("Failed to update API key:", error);
+          setPineconeStatus(false);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <>
+          <Card className="max-w-md mx-auto mt-6">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="pineconeKey">Pinecone API Key</Label>
+                <span
+                  className={`text-sm ${
+                    pineconeStatus ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {pineconeStatus ? "Connected ✅" : "Disconnected ❌"}
+                </span>
+              </div>
+              <Input
+                id="pineconeKey"
+                type="text"
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+                placeholder="Enter your Pinecone API key"
+              />
+              <Button onClick={handleUpdateKey} disabled={loading || !newKey}>
+                {loading ? "Updating..." : "Update API Key"}
+              </Button>
+            </CardContent>
+          </Card>
+        </>
+      );
+    };
+
+    const RenderDocs = () => {
       if (docsLoading) {
         return <Loader1 />;
       }
@@ -393,7 +450,7 @@ export const AppSidebar = memo(
               key={doc.created_on}
               className={`text-primary text-wrap font-medium hover:opacity-75 transition-all cursor-pointer`}
             >
-              {doc.name.slice(0, 28) + ((doc.name.length > 20) ? "..." : "")}
+              {doc.name.slice(0, 28) + (doc.name.length > 20 ? "..." : "")}
             </span>
 
             <span className="text-xs font-light">
@@ -423,7 +480,7 @@ export const AppSidebar = memo(
       ));
     };
 
-    const renderAssistants = () => {
+    const RenderAssistants = () => {
       if (sidebarLoading) {
         return <Loader1 />;
       }
@@ -440,7 +497,10 @@ export const AppSidebar = memo(
       }
 
       const filteredAssistantData = (assistants as AssistantObject[])
-        .filter((assistant) => !deletedAssistants.includes(assistant?.name.split("---")[1]))
+        .filter(
+          (assistant) =>
+            !deletedAssistants.includes(assistant?.name.split("---")[1])
+        )
         .map((assistant) => ({
           ...assistant,
           name: assistant.name.split("---")[1] || assistant.name,
@@ -506,7 +566,7 @@ export const AppSidebar = memo(
       ));
     };
 
-    const renderChats = () => {
+    const RenderChats = () => {
       return [...Array(4)]
         .flatMap(() => data.chats)
         .map((chat, id) => (
@@ -546,13 +606,13 @@ export const AppSidebar = memo(
     const renderContent = () => {
       switch (activeItem) {
         case "Docs":
-          return renderDocs();
+          return <RenderDocs/>
         case "Assistants":
-          return renderAssistants();
+          return <RenderAssistants/>
         case "Chats":
-          return renderChats();
-        default: 
-          return renderSettings();
+          return <RenderChats/>
+        default:
+          return <RenderSettings/>
       }
     };
 
@@ -633,7 +693,7 @@ export const AppSidebar = memo(
             <SidebarTrigger
               className="text-primary bg-transparent invisible"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              />
+            />
             <NavUser user={data.user} />
           </SidebarFooter>
         </Sidebar>

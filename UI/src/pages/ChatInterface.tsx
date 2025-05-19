@@ -216,11 +216,11 @@ const ChatInterface = () => {
     try {
       nProgress.start();
 
-      const formData = new FormData();
+       const formData = new FormData();
       formData.append("apiKey", apiKey);
 
       const response: any = await myAxios.post(
-        "http://localhost:8000/add-pinecone",
+        "http://localhost:8000/add_pinecone",
         formData,
         {
           withCredentials: true,
@@ -249,9 +249,22 @@ const ChatInterface = () => {
   };
 
   useEffect(() => {
-    setTimeout(() => {
-      setShowDialog(true);
-    }, 3000);
+    const checkPinecone = async () => {
+      try {
+        const response: any = await myAxios.get(
+          "http://localhost:8000/checkPineconeConnectStatus",
+          { withCredentials: true }
+        );
+        console.log("Response from Pinecone check: ", response.data);
+        response.data.success
+          ? setShowDialog(false)
+          : setShowDialog(true)
+      } catch (error) {
+        console.error("Failed to check Pinecone status:", error);
+      }
+    };
+
+    checkPinecone();
   }, []);
 
   const { apiKey, setApiKey } = usePineconeKeyStore();
