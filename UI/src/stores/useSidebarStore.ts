@@ -3,9 +3,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import myAxios from "@/lib/axios";
 import nProgress from "nprogress";
 import { toast } from "sonner";
-import { Item } from "@radix-ui/react-dropdown-menu";
+
 
 // Types
+interface PineconeAPIkey {
+  apiKey: string;
+  setApiKey: (key: string) => void;
+}
+
 interface FileObject {
   name: string;
   created_on: string;
@@ -57,6 +62,11 @@ interface SidebarState extends PersistedState, NonPersistedState {
   deleteDocument: (id: string) => Promise<void>;
   deleteAssistant: (assistantName: string) => Promise<void>;
 }
+
+export const usePineconeKeyStore = create<PineconeAPIkey>((set) => ({
+  apiKey: "",
+  setApiKey: (key) => set({ apiKey: key }),
+}))
 
 // Create the persisted part of the store
 const createPersistedStore = (initialState: PersistedState) =>

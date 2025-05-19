@@ -4,27 +4,29 @@ import uuid
 import json
 import logging
 import tempfile
-from pinecone import Pinecone
 from typing import Annotated
+from pinecone import Pinecone
+from jose import JWTError, jwt
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from ..database import get_db_data
+from starlette.requests import Request
 from .. import models, services, schemas
 from fastapi.responses import JSONResponse
 from pdfminer.high_level import extract_text
 from fastapi.encoders import jsonable_encoder
-from pinecone_plugins.assistant.models.chat import Message
-from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
-from ..utils.helpers import update_primary_assistant, get_primary_assistant
-from starlette.requests import Request
-from pydantic import BaseModel
-from jose import JWTError, jwt
 from sse_starlette.sse import EventSourceResponse
+from pinecone_plugins.assistant.models.chat import Message
+from ..utils.helpers import update_primary_assistant, get_primary_assistant
+from app.db.database import users_collection, tokens_collection
+from fastapi import APIRouter, Body, Depends, UploadFile, File, HTTPException, Form
+from cryptography.fernet import Fernet
 
 router = APIRouter()
 
 load_dotenv()
 NAMESPACE_UUID = uuid.UUID(os.getenv("NAMESPACE_UUID"))
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+# pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 ASSISTANT_NAME = "default"
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.DEBUG)
@@ -34,12 +36,67 @@ SECRET_KEY = "thisismysecret"
 ALGORITHM="HS256"
 
 
-def create_assistant_by_name(assistantName: str):
+# Encryption setup
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+if not ENCRYPTION_KEY:
+    import base64
+    import hashlib
+    # Fallback for development - DO NOT use in production
+    ENCRYPTION_KEY = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest())
+    logger.warning("Using derived encryption key from SECRET_KEY. Set ENCRYPTION_KEY in production.")
+
+cipher_suite = Fernet(ENCRYPTION_KEY)
+
+# Encryption/decryption functions
+def encrypt_api_key(api_key: str) -> str:
+    """Encrypt the API key before storing in the database"""
+    encrypted_key = cipher_suite.encrypt(api_key.encode())
+    return encrypted_key.decode()
+
+def decrypt_api_key(encrypted_api_key: str) -> str:
+    """Decrypt the API key retrieved from the database"""
+    try:
+        decrypted_key = cipher_suite.decrypt(encrypted_api_key.encode())
+        return decrypted_key.decode()
+    except Exception as e:
+        logger.error(f"Error decrypting API key: {str(e)}")
+        raise ValueError("Failed to decrypt API key")
+
+# Initialize Pinecone with user's API key
+async def init_pinecone(user_email: str) -> Pinecone:
+    """Initialize Pinecone with the user's API key"""
+
+    print("running init pinecone")
+    
+    try:
+        # Get the user's encrypted API key from the database
+        user_data = await users_collection.find_one({"email": user_email})
+
+        print("user data from init pinecone")
+        print(user_data)
+
+        if not user_data or "pinecone_apiKey" not in user_data:
+            logger.warning(f"No Pinecone API key found for user: {user_email}")
+            raise ValueError("No Pinecone API key found. Please add your API key first.")
+        
+        # Decrypt the API key
+        encrypted_api_key = user_data["pinecone_apiKey"]
+        api_key = decrypt_api_key(encrypted_api_key)
+        
+        # Initialize Pinecone with user's API key
+        return Pinecone(api_key=api_key)
+    except Exception as e:
+        logger.error(f"Error initializing Pinecone client: {str(e)}")
+        raise ValueError(f"Failed to initialize Pinecone: {str(e)}")
+
+
+async def create_assistant_by_name(assistantName: str):
     """Creates a new assistant with the given name"""
 
     print(f"Inside the create assistant function & Creating assistant with name: {assistantName}")
 
     try:
+        pc = await init_pinecone(user_email)
         assistant = pc.assistant.create_assistant(
             assistant_name=assistantName,
             instructions="You are AIPlanet's assistant and are extremely polite.",
@@ -53,12 +110,12 @@ def create_assistant_by_name(assistantName: str):
 
 
 
-def get_or_create_assistant(assistantName: str, user_email: str):
+async def get_or_create_assistant(assistantName: str, user_email: str):
     """
     Checks if the assistant exists; if not, creates a new one using createassistantbyname function.
     Returns the assistant instance.
     """
-
+ 
     print("inside get or create assistant and assistantName: ", assistantName)
 
     # Sanitize and format assistant name -> changes in a format -> aryankarma29---ass1
@@ -68,6 +125,13 @@ def get_or_create_assistant(assistantName: str, user_email: str):
     print(f"Checking existence for assistant: {full_assistant_name}")
 
     # List all existing assistants
+    print("getting pc")
+
+    pc = await init_pinecone(user_email)
+    
+    print("pc")
+    print(pc)
+
     assistants = pc.assistant.list_assistants()
     assistant_names = [assistant.name for assistant in assistants]
     print("Existing assistants:", assistant_names)
@@ -115,8 +179,63 @@ async def create_assistant(
     user_email: str = Depends(get_current_user)
 ) -> JSONResponse:
 
-    get_or_create_assistant(assistantName, user_email)
+    await get_or_create_assistant(assistantName, user_email)
     return JSONResponse(content={"message": f"Assistant '{assistantName}' created successfully.", "status": 200})
+
+
+@router.post("/add-pinecone")
+async def savePineconeApiKey(
+    apiKey: str = Form(...),
+    user_email: str = Depends(get_current_user)
+) -> JSONResponse:
+    """Get Api key from frontend and save in DB"""
+    try:
+
+        print("data: ", apiKey, user_email)
+
+        encrypted_api_key = encrypt_api_key(apiKey)
+
+        # Save the API key in the database
+        success = await users_collection.update_one(
+            {"email": user_email},
+            {"$set": {"pinecone_apiKey": encrypted_api_key}}
+        )
+
+        print("success:", success)
+
+        if success.matched_count == 0:
+            logging.error(f"No matching user found for email: {user_email}")
+            return False
+
+        # Verify the API key works with Pinecone before confirming success
+        try:
+            # Get a temporary Pinecone client to verify the API key works
+            from pinecone import Pinecone
+            temp_pc = Pinecone(api_key=apiKey)
+            # Try a simple operation to verify the API key is valid
+            indexes = temp_pc.list_indexes()
+            logging.info(f"Pinecone API key verified successfully for user: {user_email}")
+        except Exception as e:
+            logging.error(f"Invalid Pinecone API key provided: {str(e)}")
+            # If the key doesn't work, remove it from the database
+            await users_collection.update_one(
+                {"email": user_email},
+                {"$unset": {"pinecone_apiKey": ""}}
+            )
+            
+            return JSONResponse(content={
+                "success": False,
+                "message": "Invalid Pinecone API key"
+            })
+
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Api key saved in db for user {user_email}"
+        })
+
+    except Exception as e:
+        logging.error(f"Error saving API key: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to save API key")
 
 
 @router.post("/updatePrimaryAssistant")
@@ -143,7 +262,7 @@ async def save_pdf(file: UploadFile = File(...), user_email: str = Depends(get_c
     """Uploads a PDF and stores it in the Pinecone assistant."""
     try:
         assistant_name = await get_primary_assistant(user_email)
-        assistant = get_or_create_assistant(assistant_name, user_email)
+        assistant = await get_or_create_assistant(assistant_name, user_email)
         print("final assistant is : ", assistant)
         print("assistant got: ", assistant)
         print("stored in local")
@@ -174,7 +293,7 @@ async def ask_question(message: str = Form(...), chat_history: str = Form(defaul
     
     try:
         assistant_name = await get_primary_assistant(user_email)
-        assistant = get_or_create_assistant(assistant_name, user_email)
+        assistant = await get_or_create_assistant(assistant_name, user_email)
         
         # Parse chat history from JSON string
         history = json.loads(chat_history)
@@ -212,7 +331,7 @@ async def stream_question(message: str, user_email: str = Depends(get_current_us
 
     try:
         assistant_name = await get_primary_assistant(user_email)
-        assistant = get_or_create_assistant(assistant_name, user_email)
+        assistant = await get_or_create_assistant(assistant_name, user_email)
 
         msg = Message(role="user", content=message)
         response = assistant.chat(messages=[msg], stream=True)  # Streaming response from Pinecone
@@ -274,7 +393,7 @@ async def fetch_documents(assistantName: str = Form(...), user_email: str = Depe
             assistantName = assistantName[1:-1]
 
 
-        assistant = get_or_create_assistant(assistantName, user_email)
+        assistant = await get_or_create_assistant(assistantName, user_email)
 
         # Initialize the assistant instance
         # assistant = pc.assistant.Assistant(assistant_name=assistantName)
@@ -307,7 +426,7 @@ async def delete_document(docID: str = Form(...), assistantName:str = Form(...),
     
     try:
         # print("Deleting doc with id ", docID)
-        assistant = get_or_create_assistant(assistantName, user_email)
+        assistant = await get_or_create_assistant(assistantName, user_email)
         # assistant = pc.assistant.Assistant(assistant_name=assistantName)
         response = assistant.delete_file(file_id=docID)
         print("deleted.")
@@ -327,6 +446,8 @@ async def getAssistants(assistantName: str = Form(...), user_email: str = Depend
         # Sanitize and format assistant name -> changes in a format -> aryankarma29---ass1
         sanitized_email = user_email.replace("@gmail.com", "")
         full_assistant_name = f"{sanitized_email}---{assistantName}".lower()
+        
+        pc = await init_pinecone(user_email)
 
         deletedAssistantResponse = pc.assistant.delete_assistant(
             assistant_name=full_assistant_name, 
@@ -352,6 +473,7 @@ async def getAssistants(user_email: str = Depends(get_current_user)) -> JSONResp
     try:
         print(f"Fetching assistants for user: {user_email}")
 
+        pc = await init_pinecone(user_email)
         allAssistants = pc.assistant.list_assistants()
 
         # Extract user's unique prefix (email before @gmail.com)

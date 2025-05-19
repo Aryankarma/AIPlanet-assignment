@@ -96,7 +96,3 @@ app.middleware("http")(validate_token)
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
-
-@app.get("/greet/{name}")
-def greet_user(name: str):
-    return {"message": f"Hey {name}"}

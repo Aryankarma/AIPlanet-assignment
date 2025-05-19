@@ -7,6 +7,7 @@ class User(BaseModel):
     password: str
     verified: bool = False
     pineconeConnect: bool = False
+    pinecone_apiKey: str = ""
     primary_assistant: str = "default"
     created_at: datetime = datetime.now()
 

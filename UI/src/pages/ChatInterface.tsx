@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import nProgress from "nprogress";
-import { useSidebarStore } from "@/stores/useSidebarStore";
+import { useSidebarStore, usePineconeKeyStore } from "@/stores/useSidebarStore";
 import { ConnectPopup, connectToPinecone } from "@pinecone-database/connect";
 import { Label } from "@/components/ui/label";
 
@@ -78,7 +78,6 @@ const ChatInterface = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false); // Control popover state
   const [showDialog, setShowDialog] = useState(false);
-  const [pineconeKey, setPineconeKey] = useState("");
 
   // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
   //   sidebarOpen
@@ -204,12 +203,43 @@ const ChatInterface = () => {
     });
   }, []);
 
-  const handleConnect = async () => {
+  const getApiKey = async () => {
     try {
       const apiKey = await connectWithAPIKey();
       console.log("API Key:", apiKey);
     } catch (error) {
       console.error("Error:", error);
+    }
+  };
+
+  const handleApiConnect = async () => {
+    try {
+      nProgress.start();
+
+      const formData = new FormData();
+      formData.append("apiKey", apiKey);
+
+      const response: any = await myAxios.post(
+        "http://localhost:8000/add-pinecone",
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      console.log(response.data);
+
+      response.data.success
+        ? toast(`Api Key added successfully.`)
+        : toast(response.data.message);
+    } catch (error) {
+      toast(
+        "Error occured while connecting with pinecone, check console for more details"
+      );
+      console.log(error);
+    } finally {
+      nProgress.done();
     }
   };
 
@@ -223,6 +253,8 @@ const ChatInterface = () => {
       setShowDialog(true);
     }, 3000);
   }, []);
+
+  const { apiKey, setApiKey } = usePineconeKeyStore();
 
   return (
     <div className="flex flex-col min-h-screen w-screen">
@@ -245,17 +277,27 @@ const ChatInterface = () => {
               id="pinecone-key"
               placeholder="Paste your key"
               className="col-span-4"
-              value={pineconeKey}
-              onChange={(e) => setPineconeKey(e.target.value)}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
 
           <DialogFooter className="justify-between w-full flex">
-            <Button type="button" className="w-full gap-3" variant="outline" onClick={handleConnect}>
-            <ExternalLink /> Get API Key
+            <Button
+              type="button"
+              className="w-full gap-3"
+              variant="outline"
+              onClick={getApiKey}
+            >
+              <ExternalLink /> Get API Key
             </Button>
-            <Button type="submit" className="w-full gap-3" onClick={handleConnect}>
-            <LogIn /> Connect
+            <Button
+              type="submit"
+              disabled={apiKey ? false : true}
+              className="w-full gap-3"
+              onClick={handleApiConnect}
+            >
+              <LogIn /> Connect
             </Button>
           </DialogFooter>
         </DialogContent>
